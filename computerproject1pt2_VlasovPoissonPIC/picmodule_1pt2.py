@@ -104,36 +104,102 @@ def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
     rho_j = rho_j + q_i*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
 
-def PotentialSolve(rho_j,Nx):
+def LaplacianStencil(Nx,dx):
     """
-    Function to solve for the electric potential on the grid, phi_j
     Inputs:
-        rho_j - Nx x 1 array containing the charge density at each grid point
-        Nx - number of grid points
+        Nx - Number of grid points
+        dx - Grid spacing
     Outputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
-    Governing Equation: Gauss' Law
+        Lmtx - Stencil for Laplacian used in PotentialSolve
+    Governing Equations:
+        - Gauss' Law
     B.Cs: Periodic
     Gauge: phi[0] = 0
     Discretization: Finite Difference
     """
-    # Not good that I end up reassining these each time function is called
-    # but I need to know Nx to create them in the first place
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
     vals = np.vstack((v,-2.0*v,v))
+    Lmtx = sp.sparse.spdiags(vals,diags,Nx,Nx);
+    Lmtx = sp.sparse.lil_matrix(Lmtx); # need to alter entries
+    Lmtx[0,0] = 0.0
+    Lmtx[1,0] = 0.0
+    Lmtx[Nx-1,0] = 0.0
+    Lmtx /= dx**2
+    Lmtx = sp.sparse.csr_matrix(Lmtx)
+    return Lmtx
 
+def FirstDerivativeStencil(Nx,dx):
+    """
+    """
+    v = np.ones(Nx)
+    diags = np.array([-1,0,1])
+    vals = np.vstack((-v,0.0*v,v))
+    FDmtx = sp.sparse.spdiags(vals,diags,Nx,Nx)
+    FDmtx = sp.sparse.lil_matrix(FDmtx)
+    FDmtx[1,0] = 0.0
+    FDmtx[0,Nx-1] = -1.0
+    FDmtx /= 2.0*dx
+    FDmtx = sp.sparse.csr_matrix(FDmtx)
+    return FDmtx
 
+def PotentialSolve(rho_j,Lmtx,Nx):
+    """
+    Function to solve for the electric potential on the grid, phi_j
+    Inputs:
+        rho_j - Nx x 1 array containing the charge density at each grid point
+        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
+        Nx - number of grid points
+    Outputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+    """
+    phi_j = sp.sparse.linalg.spsolve(Lmtx,rho_j)
+    return phi_j
 
-def FieldSolve(phi_j):
+def FieldSolve(phi_j,FDmtx):
     """
     Function to solve for the electric field on the grid, E_j.
     Inputs:
         phi_j - Nx x 1 array containing the electric potential at each grid point
+        FDmtx - Nx x Nx matrix for calculating first derivative on the grid
     Outputs:
         E_j - Nx x 1 array containing the value of the  electric field at each grid point
     """
+    E_j = FDmtx @ phi_j
+    return E_j
 
+def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
+    """
+    Inputs:
+        WeightingOrder - {0,1}, information the program uses to determine whether
+                        to use 0th or 1st order weighting
+        dx - Grid Spacing
+        E_i - N x 1 array containing the electric fields experienced by the particles
+        E_j - Nx x 1 array containing the values of the electric field on the grid
+        x_i - N x 1 array containing the positions of the particles
+        x_j - Nx x 1 array containing the grid points
+    Outputs:
+        E_i
+    """
+    if (WeightingOrder != 0 and WeightingOrder != 1):
+        print("ERROR: Input weighting order appears to be out of bounds")
+        print("LOCATION: ForceWeighting() function ")
+        return -1
+
+    if WeightingOrder == 0:
+        for i in np.arange(np.size(x_i,axis=0)):
+            for j in np.arange(np.size(x_j,axis=0)):
+                if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
+                    E_i[i] = E_j[j]
+
+    if WeightingOrder == 1:
+        for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
+            for j in np.arange(np.size(x_j)): # Search algorithm here could be better
+                if x_j[j] < x_i[i] and x_i[i] < x_j[j+1]:
+                    break
+            E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)E_j[j+1]
+
+    return E_i
 
 def Diagnostics():
     return 0

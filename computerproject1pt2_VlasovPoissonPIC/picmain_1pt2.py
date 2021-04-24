@@ -21,8 +21,9 @@ N = int(InitVector[0]) # number of particles
 Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 
-particlesPosition = np.empty((N,1),dtype=float)
+particlesPosition = np.empty((N,1),dtype=float) 
 particlesVelocity = np.empty((N,1),dtype=float)
+particleField = np.empty((N,1),dtype=float) # array of fields experienced by particles, E_i
 
 # Initial Conditions for 1.
 if (N == 2):
@@ -45,3 +46,4 @@ rho_j = np.empty((Nx,1),dtype=float) # Grid Charge Density
 
 print("Closing Grid Generation Phase")
 """ PIC Phase """
+print("Beginning PIC Simulation")
