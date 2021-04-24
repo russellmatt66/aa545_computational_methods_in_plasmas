@@ -8,12 +8,16 @@ Module that contains the functions needed to complete 1D1V PIC simulation
 and obtain deliverables
 """
 import numpy as np
+import scipy as sp
 import matplotlib.pyplot as plt
 import time
 import sys
 
+""" Basic Parameters """
 pause = 1.0
-q = 1.0 # normalized fundamental unit of electric charge
+e = 1.0 # normalized fundamental unit of electric charge
+q_e = -e # electron charge
+q_i = e # ion charge
 
 def Initialize():
     """
@@ -23,7 +27,7 @@ def Initialize():
         WeightingOrder = InitState[2], Z \in {0,1} representing 0th- or 1st-
                                         order weighting for charge and forces.
     """
-    print("Opening Initialization Phase ...")
+    print("pmod.Initialize() executing ...")
     # I can't think of a better way to store this information
 
     InitState = np.empty((3,1),dtype=int)
@@ -48,7 +52,7 @@ def Initialize():
         time.sleep(pause)
         AnomalyHandle()
 
-    print("Closing Initialization Phase ...")
+    print("pmod.Initialize() execution complete ...")
     print(InitState)
     return InitState
 
@@ -57,37 +61,79 @@ Grid Generation: Left out for moment due to simplicity
 """
 # def GridGeneration():
 
-def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j):
+def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no velocity or current at the moment.
     Inputs:
-        WeightingOrder - {0,1}, information program uses to determine whether
+        WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
-        x_i - N x 1 array containing the particle locations
+        x_i - N x 1 array containing the particle locations, i.e, particlesPosition
         x_j - Nx x 1 array representing the spatial grid
         rho_j - Nx x 1 array containing the charge density at each grid point
-    Return Values:
-        1 = Hunky Dory
-        -1 = FUBAR
+        dx - grid spacing
+    Outputs:
+        rho_j - Nx x 1 array containing the charge density at each grid point
+    Return Code:
+        -1 - FUBAR
     """
     if (WeightingOrder != 0 and WeightingOrder != 1):
-        print("ERROR: Input weighting order appears to be out of bounds\n")
+        print("ERROR: Input weighting order appears to be out of bounds")
         print("LOCATION: ParticleWeighting() function ")
         return -1
 
+    # dx = (x_j[np.size(x_j)-1] - x_j[0])/float(np.size(x_j))
+
     if WeightingOrder == 0:
-        dx = (x_j[np.size(x_j)-1] - x_j[0])/float(np.size(x_j))
         count = np.empty((np.size(x_j),1),dtype=int)
         for j in np.arange(np.size(x_j)):
             for i in np.arange(np.size(x_i)):
                 if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
                     count[j] += 1
-            rho_j[j] = -q*float(count[j])/dx
+            rho_j[j] = q_e*float(count[j])/dx
+
+    if WeightingOrder == 1:
+        for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
+            for j in np.arange(np.size(x_j)): # Search algorithm here could be better
+                if x_j[j] < x_i[i] and x_i[i] < x_j[j+1]:
+                    break
+            rho_j[j] = q_e*(x_j[j+1] - x_i[i])/dx
+            rho_j[j+1] = q_e*(x_i[i] - x_j[j])/dx
 
     # Add contribution of static ion background
-    rho_j = rho_j + q*float(Nx)/float(x_j[np.size(x_j)-1]-x_j[0])
-    return 1
+    rho_j = rho_j + q_i*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
+    return rho_j
+
+def PotentialSolve(rho_j,Nx):
+    """
+    Function to solve for the electric potential on the grid, phi_j
+    Inputs:
+        rho_j - Nx x 1 array containing the charge density at each grid point
+        Nx - number of grid points
+    Outputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+    Governing Equation: Gauss' Law
+    B.Cs: Periodic
+    Gauge: phi[0] = 0
+    Discretization: Finite Difference
+    """
+    # Not good that I end up reassining these each time function is called
+    # but I need to know Nx to create them in the first place
+    v = np.ones(Nx)
+    diags = np.array([-1,0,1])
+    vals = np.vstack((v,-2.0*v,v))
+
+
+
+def FieldSolve(phi_j):
+    """
+    Function to solve for the electric field on the grid, E_j.
+    Inputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+    Outputs:
+        E_j - Nx x 1 array containing the value of the  electric field at each grid point
+    """
+
 
 def Diagnostics():
     return 0

@@ -12,10 +12,13 @@ import matplotlib.pyplot as plt
 import picmodule_1pt2 as pmod
 
 """ Initialization Phase """
+print("Opening Initialization Phase ...")
+
+print("Calling pmod.Initialize()")
 InitVector = pmod.Initialize()
 # Don't know of another way to get rid of view
 N = int(InitVector[0]) # number of particles
-Nx = int(InitVector[1]) + 1 # number of grid points
+Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 
 particlesPosition = np.empty((N,1),dtype=float)
@@ -28,7 +31,10 @@ if (N == 2):
     particlesVelocity[0] = 0.0
     particlesVelocity[1] = 0.0
 
+print("Closing Initialization Phase ...")
 """ Grid Generation Phase """
+print("Opening Grid Generation Phase ...")
+
 x_min = -np.pi
 x_max = np.pi
 dx = (x_max - x_min)/float(Nx)
@@ -37,4 +43,5 @@ E_j = np.empty((Nx,1),dtype=float) # Grid Electric Field
 phi_j = np.empty((Nx,1),dtype=float) # Grid Potential
 rho_j = np.empty((Nx,1),dtype=float) # Grid Charge Density
 
+print("Closing Grid Generation Phase")
 """ PIC Phase """
