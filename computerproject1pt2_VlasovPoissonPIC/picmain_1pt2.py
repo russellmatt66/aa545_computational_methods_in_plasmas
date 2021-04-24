@@ -3,7 +3,7 @@ Matt Russell
 University of Washington
 AA545: Computational Methods for Plasmas
 Computer Project 1.2: Kinetic Modeling: Vlasov-Poisson PIC
-main.py
+picmain_1pt2.py
 Main program for the given assignment to build a PIC simulation that can be used
 to investigate Langmuir Oscillations and the Leap-Frog Instability
 """
@@ -21,7 +21,7 @@ N = int(InitVector[0]) # number of particles
 Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 
-particlesPosition = np.empty((N,1),dtype=float) 
+particlesPosition = np.empty((N,1),dtype=float)
 particlesVelocity = np.empty((N,1),dtype=float)
 particleField = np.empty((N,1),dtype=float) # array of fields experienced by particles, E_i
 
