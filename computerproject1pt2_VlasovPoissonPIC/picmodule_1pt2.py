@@ -154,6 +154,7 @@ def LaplacianStencil(Nx,dx):
     Lmtx[0,0] = 0.0
     Lmtx[1,0] = 0.0
     Lmtx[Nx-1,0] = 0.0
+    Lmtx[0,Nx-1] = 1.0
     Lmtx /= dx**2
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
@@ -249,7 +250,30 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n):
     x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
     return x_i, v_i
 
-def Diagnostics():
+def ComputeEnergies(E_j,v_i):
+    Efgrid = 0.0
+    KineticEnergy = 0.0
+    for j in np.arange(np.size(E_j)):
+        Efgrid = Efgrid + E_j[j]*E_j[j]/2.0
+    print("Grid-integrated Electric field energy is %f" %Efgrid)
+    for i in np.arange(np.size(v_i)):
+        KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
+    print("System kinetic energy is %f" %KineticEnergy)
+    ETotal = Efgrid + KineticEnergy
+    return Efgrid,KineticEnergy,ETotal
+
+def Diagnostics(E_j,v_i,n,**ax):
+    Egrid = 0.0
+    KineticEnergy = 0.0
+    # if n == 0:
+        # diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
+    for j in np.arange(np.size(E_j)):
+        Egrid = Egrid + E_j[j]*E_j[j]/2.0
+    ax[0].scatter(n,Egrid)
+    for i in np.arange(np.size(v_i)):
+        KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
+    ax[1].scatter(n,KineticEnergy)
+    ax[2].scatter(n,Egrid+KineticEnergy)
     return 0
 
 def AnomalyHandle():

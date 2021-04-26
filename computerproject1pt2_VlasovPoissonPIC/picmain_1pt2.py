@@ -53,6 +53,7 @@ print("Beginning PIC Simulation")
 dt = 0.01 # time step
 Nt = 10 # number of steps to take
 qm = -1.0
+diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
 for n in np.arange(Nt):
     print("Taking step %i" %n)
     rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,x_grid,rho_j,dx,N)
@@ -60,3 +61,10 @@ for n in np.arange(Nt):
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)
     particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n)
+    Efgrid,Ekin,Etotal = pmod.ComputeEnergies(E_j,particlesVelocity)
+    axKin.scatter(n,Ekin)
+    axE.scatter(n,Efgrid)
+    axTot.scatter(n,Etotal)
+    # pmod.Diagnostics(E_j,particlesVelocity,n,axes=[axKin,axE,axTot])
+
+plt.show()
