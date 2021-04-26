@@ -23,7 +23,7 @@ WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 
 particlesPosition = np.empty((N,1),dtype=float)
 particlesVelocity = np.empty((N,1),dtype=float)
-particleField = np.empty((N,1),dtype=float) # array of fields experienced by particles, E_i
+particlesField = np.empty((N,1),dtype=float) # array of fields experienced by particles, E_i
 
 # Initial Conditions for 1.
 if (N == 2):
@@ -44,6 +44,19 @@ E_j = np.empty((Nx,1),dtype=float) # Grid Electric Field
 phi_j = np.empty((Nx,1),dtype=float) # Grid Potential
 rho_j = np.empty((Nx,1),dtype=float) # Grid Charge Density
 
+Lmtx = pmod.LaplacianStencil(Nx,dx)
+FDmtx = pmod.FirstDerivativeStencil(Nx,dx)
+
 print("Closing Grid Generation Phase")
 """ PIC Phase """
 print("Beginning PIC Simulation")
+dt = 0.01 # time step
+Nt = 10 # number of steps to take
+qm = -1.0
+for n in np.arange(Nt):
+    print("Taking step %i" %n)
+    rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,x_grid,rho_j,dx,N)
+    phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
+    E_j = pmod.FieldSolveES(phi_j,FDmtx)
+    particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)
+    particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n)

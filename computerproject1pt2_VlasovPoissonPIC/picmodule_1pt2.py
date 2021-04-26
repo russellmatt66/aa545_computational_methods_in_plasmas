@@ -8,7 +8,8 @@ Module that contains the functions needed to complete 1D1V PIC simulation
 and obtain deliverables
 """
 import numpy as np
-import scipy as sp
+from scipy import sparse as sp
+from scipy.sparse import linalg as la
 import matplotlib.pyplot as plt
 import time
 import sys
@@ -38,7 +39,8 @@ def Initialize():
         time.sleep(pause)
         AnomalyHandle()
 
-    print("Please enter the desired number of grid cells for the mesh, must be a power of 2:")
+    print("Please enter the desired number of grid CELLS for the mesh (must be a power of 2).")
+    print("Note that this will be one less than the number of grid POINTS:")
     InitState[1] = int(input(''))
     if(InitState[1] % 2 != 0):
         print("ERROR: %i is not a power of 2" %InitState[1])
@@ -47,7 +49,7 @@ def Initialize():
 
     print("Please enter 0 for 0th-order charge/force weighting or 1 for 1st-order:")
     InitState[2] = int(input(''))
-    if(InitState[2] != 0 or InitState[2] != 1):
+    if(InitState[2] != 0 and InitState[2] != 1):
         print("ERROR: The entry for charge/force weighting must be either 0 or 1")
         time.sleep(pause)
         AnomalyHandle()
@@ -61,7 +63,7 @@ Grid Generation: Left out for moment due to simplicity
 """
 # def GridGeneration():
 
-def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
+def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no velocity or current at the moment.
@@ -72,6 +74,7 @@ def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
         x_j - Nx x 1 array representing the spatial grid
         rho_j - Nx x 1 array containing the charge density at each grid point
         dx - grid spacing
+        N - Number of Particles
     Outputs:
         rho_j - Nx x 1 array containing the charge density at each grid point
     Return Code:
@@ -104,6 +107,31 @@ def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
     rho_j = rho_j + q_i*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
 
+def PotentialSolveES(rho_j,Lmtx,Nx):
+    """
+    Function to solve for the electric potential on the grid, phi_j
+    Inputs:
+        rho_j - Nx x 1 array containing the charge density at each grid point
+        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
+        Nx - number of grid points
+    Outputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+    """
+    phi_j = la.spsolve(Lmtx,rho_j)
+    return phi_j
+
+def FieldSolveES(phi_j,FDmtx):
+    """
+    Function to solve for the electric field on the grid, E_j.
+    Inputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+        FDmtx - Nx x Nx matrix for calculating first derivative on the grid
+    Outputs:
+        E_j - Nx x 1 array containing the value of the  electric field at each grid point
+    """
+    E_j = FDmtx @ phi_j
+    return E_j
+
 def LaplacianStencil(Nx,dx):
     """
     Output is used as an argument for PotentialSolve()
@@ -121,13 +149,13 @@ def LaplacianStencil(Nx,dx):
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
     vals = np.vstack((v,-2.0*v,v))
-    Lmtx = sp.sparse.spdiags(vals,diags,Nx,Nx);
-    Lmtx = sp.sparse.lil_matrix(Lmtx); # need to alter entries
+    Lmtx = sp.spdiags(vals,diags,Nx,Nx);
+    Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
     Lmtx[0,0] = 0.0
     Lmtx[1,0] = 0.0
     Lmtx[Nx-1,0] = 0.0
     Lmtx /= dx**2
-    Lmtx = sp.sparse.csr_matrix(Lmtx)
+    Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
 
 def FirstDerivativeStencil(Nx,dx):
@@ -145,38 +173,13 @@ def FirstDerivativeStencil(Nx,dx):
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
     vals = np.vstack((-v,0.0*v,v))
-    FDmtx = sp.sparse.spdiags(vals,diags,Nx,Nx)
-    FDmtx = sp.sparse.lil_matrix(FDmtx)
+    FDmtx = sp.spdiags(vals,diags,Nx,Nx)
+    FDmtx = sp.lil_matrix(FDmtx)
     FDmtx[1,0] = 0.0
     FDmtx[0,Nx-1] = -1.0
     FDmtx /= 2.0*dx
-    FDmtx = sp.sparse.csr_matrix(FDmtx)
+    FDmtx = sp.csr_matrix(FDmtx)
     return FDmtx
-
-def PotentialSolve(rho_j,Lmtx,Nx):
-    """
-    Function to solve for the electric potential on the grid, phi_j
-    Inputs:
-        rho_j - Nx x 1 array containing the charge density at each grid point
-        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
-        Nx - number of grid points
-    Outputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
-    """
-    phi_j = sp.sparse.linalg.spsolve(Lmtx,rho_j)
-    return phi_j
-
-def FieldSolve(phi_j,FDmtx):
-    """
-    Function to solve for the electric field on the grid, E_j.
-    Inputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
-        FDmtx - Nx x Nx matrix for calculating first derivative on the grid
-    Outputs:
-        E_j - Nx x 1 array containing the value of the  electric field at each grid point
-    """
-    E_j = FDmtx @ phi_j
-    return E_j
 
 def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
     """
@@ -207,9 +210,44 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
             for j in np.arange(np.size(x_j)): # Search algorithm here could be better
                 if x_j[j] < x_i[i] and x_i[i] < x_j[j+1]:
                     break
-            E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)E_j[j+1]
+            E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)*E_j[j+1]
 
     return E_i
+
+def EulerStep(dt,E_i,v_i,qm):
+    """
+    Function used for half-step to start Leap-Frog method
+    Inputs:
+        dt - Time step
+        E_i - N x 1 array containing the values of the electric field experienced
+            by each of the different particles
+        v_i - N x 1 array containing the velocity of the different particles at t = 0 = t_{0}
+        qm - charge-to-mass ratio of the superparticle
+    Outputs:
+        v_i - N x 1 array containing the velocity of the different particles at t = dt/2 = t_{1/2}
+    """
+    v_i = v_i + qm*dt*E_i
+    return v_i
+
+def LeapFrog(x_i,v_i,E_i,dt,qm,n):
+    """
+    Function to compute the particle advance using the Leapfrog algorithm
+    Inputs:
+        x_i - x_i(t_{n-1}), N x 1 array of particle positions at t = t_{n-1} = (n-1)*dt
+        v_i - v_i(t_{n-1/2}), N x 1 array of particle velocities in 1D
+        dt - Time step
+        qm - charge-to-mass ratio of the superparticles
+        n - Time level
+    Outputs:
+        x_i - x_i(t_{n}), N x 1 array of particles positions at t = t_{n} = n*dt
+        v_i - v_i(t_{n+1/2})
+    """
+    if n == 0: # First step requires a half-step for the velocity
+        v_i = EulerStep(dt/2.0,E_i,v_i,qm)# dt -> dt/2.0 so that it's a half-step
+        x_i = x_i + dt*v_i
+    v_i = v_i + qm*dt*E_i # v_i(t_{n+1/2}) = v_i(t_{n-1/2}) + (q/m)*dt*E_i
+    x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
+    return x_i, v_i
 
 def Diagnostics():
     return 0
