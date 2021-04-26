@@ -106,13 +106,14 @@ def ParticleWeighting(WeightingOrder,dx,x_i,x_j,rho_j):
 
 def LaplacianStencil(Nx,dx):
     """
+    Output is used as an argument for PotentialSolve()
     Inputs:
         Nx - Number of grid points
         dx - Grid spacing
     Outputs:
-        Lmtx - Stencil for Laplacian used in PotentialSolve
+        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
     Governing Equations:
-        - Gauss' Law
+        (1) Gauss' Law -> Poisson's Equation
     B.Cs: Periodic
     Gauge: phi[0] = 0
     Discretization: Finite Difference
@@ -131,6 +132,15 @@ def LaplacianStencil(Nx,dx):
 
 def FirstDerivativeStencil(Nx,dx):
     """
+    Output is used as an argument for FieldSolve()
+    Inputs:
+        Nx - Number of grid points
+        dx - Grid spacing
+    Outputs:
+        FDmtx - Nx x Nx matrix for calculating first derivative of potential
+    Governing Equations:
+        (1) E = -grad(phi) => E = -d(phi)/dx
+    Discretization: Central Difference
     """
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
@@ -173,8 +183,8 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
-        dx - Grid Spacing
         E_i - N x 1 array containing the electric fields experienced by the particles
+        dx - Grid Spacing
         E_j - Nx x 1 array containing the values of the electric field on the grid
         x_i - N x 1 array containing the positions of the particles
         x_j - Nx x 1 array containing the grid points
