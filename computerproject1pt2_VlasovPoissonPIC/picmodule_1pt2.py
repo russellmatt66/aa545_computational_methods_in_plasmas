@@ -16,9 +16,9 @@ import sys
 
 """ Basic Parameters """
 pause = 1.0
-e = 1.0 # normalized fundamental unit of electric charge
-q_e = -e # electron charge
-q_i = e # ion charge
+# e = 1.0 # normalized fundamental unit of electric charge
+# q_e = -e # electron charge
+# q_i = e # ion charge
 
 def Initialize():
     """
@@ -63,7 +63,34 @@ Grid Generation: Left out for moment due to simplicity
 """
 # def GridGeneration():
 
-def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N):
+def Findj(x_j,x_i,guess,low,high):
+    """
+    Binary search to find j for 1st-order weighting s.t x_j[j] < x_i < x_j[j+1]
+    Inputs:
+        x_j - Nx x 1 ndarray representing spatial grid
+        x_i - Scalar (float64) variable representing superparticle position
+        guess - Initial guess for jfound
+        low - Initial lower bound for jfound
+        high - Initial upper bound for jfound
+    Outputs:
+        jfound - the index that fulfills the condition described in fncn summary
+    """
+    i = 0 # counter
+    while((x_i > x_j[guess] and x_i < x_j[guess + 1]) == False):
+        print("cycle count = %i" %i)
+        if(x_j[guess] < x_i):
+            low = guess
+            guess = int(np.floor((low+high)/2))
+        elif(x_j[guess] > x_i):
+            high = guess
+            guess = int(np.floor((low+high)/2))
+        i += 1 # brakes
+        if(i > int(np.sqrt(np.size(x_j)))):
+            break
+    # print("Search complete, index found is %i in %i iterations" %(guess,i))
+    return guess
+
+def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no velocity or current at the moment.
@@ -75,6 +102,8 @@ def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N):
         rho_j - Nx x 1 array containing the charge density at each grid point
         dx - grid spacing
         N - Number of Particles
+        q_e - charge associated with each superparticle
+        q_background - charge associated with the background
     Outputs:
         rho_j - Nx x 1 array containing the charge density at each grid point
     Return Code:
@@ -88,23 +117,22 @@ def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N):
     # dx = (x_j[np.size(x_j)-1] - x_j[0])/float(np.size(x_j))
 
     if WeightingOrder == 0:
-        count = np.empty((np.size(x_j),1),dtype=int)
+        count = np.zeros((np.size(x_j),1),dtype=int)
         for j in np.arange(np.size(x_j)):
             for i in np.arange(np.size(x_i)):
                 if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
                     count[j] += 1
-            rho_j[j] = q_e*float(count[j])/dx
+                rho_j[j] = q_e*float(count[j])/dx
 
     if WeightingOrder == 1:
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
             for j in np.arange(np.size(x_j)): # Search algorithm here could be better
-                if x_j[j] < x_i[i] and x_i[i] < x_j[j+1]:
-                    break
-            rho_j[j] = q_e*(x_j[j+1] - x_i[i])/dx
-            rho_j[j+1] = q_e*(x_i[i] - x_j[j])/dx
+                if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
+                    rho_j[j] = q_e*(x_j[j+1] - x_i[i])/dx
+                    rho_j[j+1] = q_e*(x_i[i] - x_j[j])/dx
 
     # Add contribution of static ion background
-    rho_j = rho_j + q_i*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
+    rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
 
 def PotentialSolveES(rho_j,Lmtx,Nx):
@@ -151,9 +179,9 @@ def LaplacianStencil(Nx,dx):
     vals = np.vstack((v,-2.0*v,v))
     Lmtx = sp.spdiags(vals,diags,Nx,Nx);
     Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    Lmtx[0,0] = 0.0
-    Lmtx[1,0] = 0.0
-    Lmtx[Nx-1,0] = 0.0
+    # Lmtx[0,0] = 0.0, linearly dependent column space => singular matrix
+    # Lmtx[1,0] = 0.0
+    # Lmtx[Nx-1,0] = 0.0
     Lmtx[0,Nx-1] = 1.0
     Lmtx /= dx**2
     Lmtx = sp.csr_matrix(Lmtx)
@@ -209,10 +237,8 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
     if WeightingOrder == 1:
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
             for j in np.arange(np.size(x_j)): # Search algorithm here could be better
-                if x_j[j] < x_i[i] and x_i[i] < x_j[j+1]:
-                    break
-            E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)*E_j[j+1]
-
+                if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
+                    E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)*E_j[j+1]
     return E_i
 
 def EulerStep(dt,E_i,v_i,qm):
@@ -253,16 +279,21 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n):
 def ComputeEnergies(E_j,v_i):
     Efgrid = 0.0
     KineticEnergy = 0.0
+    ETotal = 0.0
     for j in np.arange(np.size(E_j)):
         Efgrid = Efgrid + E_j[j]*E_j[j]/2.0
-    print("Grid-integrated Electric field energy is %f" %Efgrid)
+    # print("Grid-integrated Electric field energy is %f" %Efgrid)
     for i in np.arange(np.size(v_i)):
         KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
-    print("System kinetic energy is %f" %KineticEnergy)
+    # print("System kinetic energy is %f" %KineticEnergy)
     ETotal = Efgrid + KineticEnergy
     return Efgrid,KineticEnergy,ETotal
 
 def Diagnostics(E_j,v_i,n,**ax):
+    """
+    Function to implement appropriate diagnostic. Don't know how to pass axes
+    object to function as an argument.
+    """
     Egrid = 0.0
     KineticEnergy = 0.0
     # if n == 0:
