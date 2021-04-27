@@ -63,7 +63,7 @@ Grid Generation: Left out for moment due to simplicity
 """
 # def GridGeneration():
 
-def Findj(x_j,x_i,guess,low,high):
+def Findj(x_j,x_i):
     """
     Binary search to find j for 1st-order weighting s.t x_j[j] < x_i < x_j[j+1]
     Inputs:
@@ -76,8 +76,11 @@ def Findj(x_j,x_i,guess,low,high):
         jfound - the index that fulfills the condition described in fncn summary
     """
     i = 0 # counter
+    low = 0
+    high = np.size(x_j) - 1
+    guess = int(np.floor((low+high)/2))
     while((x_i > x_j[guess] and x_i < x_j[guess + 1]) == False):
-        print("cycle count = %i" %i)
+        # print("cycle count = %i" %i)
         if(x_j[guess] < x_i):
             low = guess
             guess = int(np.floor((low+high)/2))
@@ -87,7 +90,8 @@ def Findj(x_j,x_i,guess,low,high):
         i += 1 # brakes
         if(i > int(np.sqrt(np.size(x_j)))):
             break
-    # print("Search complete, index found is %i in %i iterations" %(guess,i))
+    print("Search complete, index found is %i in %i iterations" %(guess,i))
+    # time.sleep(pause)
     return guess
 
 def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
@@ -125,11 +129,11 @@ def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
                 rho_j[j] = q_e*float(count[j])/dx
 
     if WeightingOrder == 1:
+        rho_j[:] = 0.0
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
-            for j in np.arange(np.size(x_j)): # Search algorithm here could be better
-                if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
-                    rho_j[j] = q_e*(x_j[j+1] - x_i[i])/dx
-                    rho_j[j+1] = q_e*(x_i[i] - x_j[j])/dx
+            jfound = Findj(x_j,x_i[i])# binary search
+            rho_j[jfound] = q_e*(x_j[jfound+1] - x_i[i])/dx
+            rho_j[jfound+1] = q_e*(x_i[i] - x_j[jfound])/dx
 
     # Add contribution of static ion background
     rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
@@ -236,9 +240,11 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
 
     if WeightingOrder == 1:
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
-            for j in np.arange(np.size(x_j)): # Search algorithm here could be better
-                if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
-                    E_i[i] = ((x_j[j+1] - x_i[i])/dx)*E_j[j] + ((x_i[i] - x_j[j])/dx)*E_j[j+1]
+            jfound = Findj(x_j,x_i[i])
+            E_i[i] = ((x_j[jfound+1] - x_i[i])/dx)*E_j[jfound] + ((x_i[i] - x_j[jfound])/dx)*E_j[jfound+1]
+            # for j in np.arange(np.size(x_j)): # Search algorithm here could be better
+            #     if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
+
     return E_i
 
 def EulerStep(dt,E_i,v_i,qm):

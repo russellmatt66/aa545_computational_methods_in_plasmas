@@ -19,9 +19,9 @@ dx = (x_max - x_min)/float(Nx)
 """ Test Findj() """
 Ntests_Findj = 10
 x_i_test = (x_max - x_min)*np.random.rand(Ntests_Findj) + x_min
-low = 0
-high = np.size(x_grid) - 1 # looking for index
-guess = int(np.floor((low + high)/2))
+# low = 0
+# high = np.size(x_grid) - 1 # looking for index
+# guess = int(np.floor((low + high)/2))
 # print("x_j[j] is %f" %x_grid[guess])
 # print("x_j[j+1] is %f" %x_grid[guess+1])
 for i in np.arange(Ntests_Findj):
@@ -29,7 +29,7 @@ for i in np.arange(Ntests_Findj):
     print("x_i is %f" %x_i_test[i])
     # print(x_i_test[i] < x_grid[guess])
     # print(x_i_test[i] < x_grid[guess+1])
-    jfound_test = pmod.Findj(x_grid,x_i_test[i],guess,low,high)
+    jfound_test = pmod.Findj(x_grid,x_i_test[i])
 
 """ Trying to observe Lmtx structure """
 # Lmtx is exactly singular on first iteration 4 some reason

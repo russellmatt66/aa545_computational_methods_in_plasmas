@@ -57,7 +57,7 @@ qm = -1.0 # charge to mass ratio of superparticle
 print("Closing Grid Generation Phase")
 """ PIC Phase """
 print("Beginning PIC Simulation")
-dt = 0.1 # time step, relative to plasma period
+dt = 1.0 # time step, relative to plasma period
 Nt = 100 # number of steps to take
 KineticEnergy = np.empty(Nt)
 ElectricFieldEnergy = np.empty(Nt)
