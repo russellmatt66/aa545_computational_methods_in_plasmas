@@ -62,8 +62,8 @@ print("Closing Grid Generation Phase")
 print("Beginning PIC Simulation")
 omega_p = 1.0
 tau_plasma = 2.0*np.pi/omega_p
-dt = 0.01*tau_plasma # [s]
-Nt = 500 # number of steps to take
+dt = 0.05*tau_plasma # [s]
+Nt = 1000 # number of steps to take
 KineticEnergy = np.empty(Nt)
 ElectricFieldEnergy = np.empty(Nt)
 TotalEnergy = np.empty(Nt)
