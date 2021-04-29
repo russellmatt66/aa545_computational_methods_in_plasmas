@@ -22,22 +22,38 @@ pause = 1.0
 
 def Initialize():
     """
-    InitState - 3x1 column vector containing:
+    InitState - 4x1 column vector containing:
         N = InitState[0], the number of particles to be used in the simulation
         Nx = InitState[1], the number of grid points " " " " " "
         WeightingOrder = InitState[2], Z \in {0,1} representing 0th- or 1st-
                                         order weighting for charge and forces.
+        ZeroInitialV = InitState[3], flag for the N = 2 case
     """
     print("pmod.Initialize() executing ...")
     # I can't think of a better way to store this information
 
-    InitState = np.empty((3,1),dtype=int)
-    print("Please enter the number of particles to simulate, must be a power of 2:")
+    InitState = np.empty((4,1),dtype=int)
+    print("Please enter the number of particles to simulate")
+    print("The number must be a power of 2 and cannot be larger than 64")
     InitState[0] = int(input(''))
     if(InitState[0] % 2 != 0):
         print("ERROR: %i is not a power of 2" %InitState[0])
         time.sleep(pause)
         AnomalyHandle()
+    if(InitState[0] > 64):
+        print("ERROR: %i is larger than 64" %InitState[0])
+        time.sleep(pause)
+        AnomalyHandle()
+
+    if InitState[0] == 2:
+        print("Initial velocity or not? 0 for no, 1 for yes")
+        InitState[3] = int(input(''))
+        if(InitState[3] != 0 and InitState[3] != 1):
+            print("ERROR: %i is not 0 or 1" %InitState[3])
+            time.sleep(pause)
+            AnomalyHandle()
+    elif InitState[0] != 2:
+        InitState[3] = -1
 
     print("Please enter the desired number of grid CELLS for the mesh (must be a power of 2).")
     print("Note that this will be one less than the number of grid POINTS:")
@@ -322,6 +338,36 @@ def Diagnostics(E_j,v_i,n,**ax):
     ax[1].scatter(n,KineticEnergy)
     ax[2].scatter(n,Egrid+KineticEnergy)
     return 0
+
+""" Helper Functions """
+
+def AddHex(hex1,hex2):
+    """
+    hex1 - str representing first hexadecimal number
+    hex2 - str representing second hexadecimal number
+    Assumes hexadecimal in format: hexnumber = "0x******"
+    """
+    if(hex1[0] != '0' and hex1[1] != 'x'):
+        print("First input to AddHex() is incorrectly formatted")
+        AnomalyHandle()
+    if(hex2[0] != '0' and hex2[1] != 'x'):
+        print("Second input to AddHex() is incorrectly formatted")
+        AnomalyHandle()
+    int1 = int(hex1,16)
+    int2 = int(hex2,16)
+    sum = int1 + int2
+    return(hex(sum))
+
+def FormatHex(hex2f):
+    """
+    Format str representing hexadecimal number for usage as argument in pyplot.scatter()
+    Take "0x******" to "#******"
+    """
+    if(hex2f[0] != '0' and hex2f[1] != 'x'):
+        print("Input to FormatHex() is incorrectly formatted")
+        AnomalyHandle()
+    hex2f = "#" + hex2f[2:]
+
 
 def AnomalyHandle():
     print("Please rerun the program")

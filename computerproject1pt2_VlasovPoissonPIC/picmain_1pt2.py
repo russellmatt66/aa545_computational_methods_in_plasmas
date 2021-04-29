@@ -20,17 +20,33 @@ InitVector = pmod.Initialize()
 N = int(InitVector[0]) # number of particles
 Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
+ZeroInitialV = int(InitVector[3])
+
+# Colors for the scatterplot later
+particleColors = np.empty(N)
+black = '#000000'
+white = '#ffffff'
+
+for cidx in np.arange(N):
+    particleColors[cidx] =
 
 particlesPosition = np.empty((N,1),dtype=float)
 particlesVelocity = np.empty((N,1),dtype=float)
 particlesField = np.empty((N,1),dtype=float) # array of fields experienced by particles, E_i
 
 # Initial Conditions for 1.
-if (N == 2):
+if (N == 2 and ZeroInitialV == 0):
     particlesPosition[0] = -np.pi/4.0
     particlesPosition[1] = np.pi/4.0
     particlesVelocity[0] = 0.0
     particlesVelocity[1] = 0.0
+
+if(N == 2 and ZeroInitialV == 1):
+    vprime = 1.0e-3
+    particlesPosition[0] = -np.pi/2.0
+    particlesPosition[1] = np.pi/2.0
+    particlesVelocity[0] = vprime
+    particlesVelocity[1] = -vprime
 
 # diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
 EnergyFig = plt.figure()
@@ -63,7 +79,7 @@ print("Beginning PIC Simulation")
 omega_p = 1.0
 tau_plasma = 2.0*np.pi/omega_p
 dt = 0.05*tau_plasma # [s]
-Nt = 1000 # number of steps to take
+Nt = 300 # number of steps to take
 KineticEnergy = np.empty(Nt)
 ElectricFieldEnergy = np.empty(Nt)
 TotalEnergy = np.empty(Nt)

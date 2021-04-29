@@ -17,19 +17,24 @@ x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
 
 """ Test Findj() """
-Ntests_Findj = 10
-x_i_test = (x_max - x_min)*np.random.rand(Ntests_Findj) + x_min
-# low = 0
-# high = np.size(x_grid) - 1 # looking for index
-# guess = int(np.floor((low + high)/2))
-# print("x_j[j] is %f" %x_grid[guess])
-# print("x_j[j+1] is %f" %x_grid[guess+1])
-for i in np.arange(Ntests_Findj):
-    print("Test %i beginning" %(i+1))
-    print("x_i is %f" %x_i_test[i])
-    # print(x_i_test[i] < x_grid[guess])
-    # print(x_i_test[i] < x_grid[guess+1])
-    jfound_test = pmod.Findj(x_grid,x_i_test[i])
+# Ntests_Findj = 10
+# x_i_test = (x_max - x_min)*np.random.rand(Ntests_Findj) + x_min
+# # low = 0
+# # high = np.size(x_grid) - 1 # looking for index
+# # guess = int(np.floor((low + high)/2))
+# # print("x_j[j] is %f" %x_grid[guess])
+# # print("x_j[j+1] is %f" %x_grid[guess+1])
+# for i in np.arange(Ntests_Findj):
+#     print("Test %i beginning" %(i+1))
+#     print("x_i is %f" %x_i_test[i])
+#     # print(x_i_test[i] < x_grid[guess])
+#     # print(x_i_test[i] < x_grid[guess+1])
+#     jfound_test = pmod.Findj(x_grid,x_i_test[i])
+
+""" Test AddHex()"""
+hexA = '0x100d00'
+hexB = '0x020f00'
+print(pmod.AddHex(hexA,hexB))
 
 """ Trying to observe Lmtx structure """
 # Lmtx is exactly singular on first iteration 4 some reason
