@@ -31,11 +31,30 @@ dx = (x_max - x_min)/float(Nx)
 #     # print(x_i_test[i] < x_grid[guess+1])
 #     jfound_test = pmod.Findj(x_grid,x_i_test[i])
 
-""" Test AddHex()"""
+""" Test AddHex() and FormatHex()"""
 hexA = '0x100d00'
 hexB = '0x020f00'
 print(pmod.AddHex(hexA,hexB))
+print(pmod.FormatHex(hexA))
+print(hexA)
 
+""" Test particleColors[:] creation """
+N = 2
+particleColors = [None] * N
+black = '0x000000'
+white = '0xffffff'
+hexIncrement = hex(int((int(white,16)-int(black,16))/N))
+print(hexIncrement)
+print(type(hexIncrement))
+hexColor = '0x000000'
+
+for cidx in np.arange(N):
+    print(hexColor)
+    particleColors[cidx] = hexColor
+    print(particleColors[cidx])
+    hexColor = pmod.AddHex(hexColor,hexIncrement)
+
+print(particleColors)
 """ Trying to observe Lmtx structure """
 # Lmtx is exactly singular on first iteration 4 some reason
 # Lmtx = pmod.LaplacianStencil(Nx,dx)

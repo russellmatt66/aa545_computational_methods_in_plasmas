@@ -23,12 +23,15 @@ WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 ZeroInitialV = int(InitVector[3])
 
 # Colors for the scatterplot later
-particleColors = np.empty(N)
-black = '#000000'
-white = '#ffffff'
+particleColors = [None] * N
+black = '0x000000'
+white = '0xffffff'
+hexIncrement = hex(int((int(white,16)-int(black,16))/N))
+hexColor = '0x000000'
 
 for cidx in np.arange(N):
-    particleColors[cidx] =
+    particleColors[cidx] = pmod.FormatHex(hexColor)
+    hexColor = pmod.AddHex(hexColor,hexIncrement)
 
 particlesPosition = np.empty((N,1),dtype=float)
 particlesVelocity = np.empty((N,1),dtype=float)
@@ -96,8 +99,8 @@ for n in np.arange(Nt):
     ElectricFieldEnergy[n] = Efgrid
     TotalEnergy[n] = Etotal
     plt.figure(PhaseSpaceFig.number)
-    for i in np.arange(N):
-        plt.scatter(particlesPosition[i],particlesVelocity[i])
+    for pidx in np.arange(N):
+        plt.scatter(particlesPosition[pidx],particlesVelocity[pidx],c=particleColors[pidx])
     # axKin.scatter(n,Ekin)
     # axE.scatter(n,Efgrid)
     # axTot.scatter(n,Etotal)

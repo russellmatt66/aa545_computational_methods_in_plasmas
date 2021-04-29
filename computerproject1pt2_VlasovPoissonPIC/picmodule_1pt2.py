@@ -366,10 +366,10 @@ def FormatHex(hex2f):
     if(hex2f[0] != '0' and hex2f[1] != 'x'):
         print("Input to FormatHex() is incorrectly formatted")
         AnomalyHandle()
-    hex2f = "#" + hex2f[2:]
+    return "#" + hex2f[2:]
 
 
 def AnomalyHandle():
     print("Please rerun the program")
     time.sleep(pause)
-    sys.exit("Exiting")
+    sys.exit("Exiting ...")
