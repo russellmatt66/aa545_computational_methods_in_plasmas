@@ -51,7 +51,7 @@ Lmtx = pmod.LaplacianStencil(Nx,dx)
 FDmtx = pmod.FirstDerivativeStencil(Nx,dx)
 
 q_e = -L/float(N) # charge associated with a superparticle given normalization
-q_background = -q_e # charge associated with the background
+# q_background = -q_e # charge associated with the background
 qm = -1.0 # charge to mass ratio of superparticle
 
 print("Closing Grid Generation Phase")
@@ -65,7 +65,7 @@ TotalEnergy = np.empty(Nt)
 
 for n in np.arange(Nt):
     print("Taking step %i" %n)
-    rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,x_grid,rho_j,dx,N,q_e,q_background)
+    rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_e)
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)

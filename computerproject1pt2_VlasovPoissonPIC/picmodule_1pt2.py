@@ -94,7 +94,7 @@ def Findj(x_j,x_i):
     # time.sleep(pause)
     return guess
 
-def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
+def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_e):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no velocity or current at the moment.
@@ -102,12 +102,12 @@ def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
         WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
         x_i - N x 1 array containing the particle locations, i.e, particlesPosition
-        x_j - Nx x 1 array representing the spatial grid
-        rho_j - Nx x 1 array containing the charge density at each grid point
-        dx - grid spacing
         N - Number of Particles
+        x_j - Nx x 1 array representing the spatial grid
+        dx - grid spacing
+        L - length of grid
+        rho_j - Nx x 1 array containing the charge density at each grid point
         q_e - charge associated with each superparticle
-        q_background - charge associated with the background
     Outputs:
         rho_j - Nx x 1 array containing the charge density at each grid point
     Return Code:
@@ -131,12 +131,14 @@ def ParticleWeighting(WeightingOrder,x_i,x_j,rho_j,dx,N,q_e,q_background):
     if WeightingOrder == 1:
         rho_j[:] = 0.0
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
-            jfound = Findj(x_j,x_i[i])# binary search
+            jfound = Findj(x_j,x_i[i]) # binary search
             rho_j[jfound] = q_e*(x_j[jfound+1] - x_i[i])/dx
             rho_j[jfound+1] = q_e*(x_i[i] - x_j[jfound])/dx
 
-    # Add contribution of static ion background
-    rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
+    # Add contribution of static, uniform ion background s.t plasma is quasineutral
+    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)])+ (rho_j[0] + rho_j[Nx-1])*0.5)
+    rho_j = rho_j + rho_background
+    # rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
 
 def PotentialSolveES(rho_j,Lmtx,Nx):
