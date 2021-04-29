@@ -32,7 +32,9 @@ if (N == 2):
     particlesVelocity[0] = 0.0
     particlesVelocity[1] = 0.0
 
-diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
+# diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
+EnergyFig = plt.figure()
+PhaseSpaceFig = plt.figure()
 
 print("Closing Initialization Phase ...")
 """ Grid Generation Phase """
@@ -50,39 +52,46 @@ rho_j = np.empty((Nx,1),dtype=float) # Grid Charge Density
 Lmtx = pmod.LaplacianStencil(Nx,dx)
 FDmtx = pmod.FirstDerivativeStencil(Nx,dx)
 
-q_e = -L/float(N) # charge associated with a superparticle given normalization
+q_sp = -L/float(N) # charge associated with a superparticle given normalization - population assumed uniform
+m_sp = -q_sp # mass associated with a particular superparticle given normalization - population assumed uniform
 # q_background = -q_e # charge associated with the background
 qm = -1.0 # charge to mass ratio of superparticle
 
 print("Closing Grid Generation Phase")
 """ PIC Phase """
 print("Beginning PIC Simulation")
-dt = 1.0 # time step, relative to plasma period
-Nt = 100 # number of steps to take
+omega_p = 1.0
+tau_plasma = 2.0*np.pi/omega_p
+dt = 0.01*tau_plasma # [s]
+Nt = 500 # number of steps to take
 KineticEnergy = np.empty(Nt)
 ElectricFieldEnergy = np.empty(Nt)
 TotalEnergy = np.empty(Nt)
 
 for n in np.arange(Nt):
     print("Taking step %i" %n)
-    rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_e)
+    rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_sp)
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)
     particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n)
-    Efgrid,Ekin,Etotal = pmod.ComputeEnergies(E_j,particlesVelocity) # Diagnostic implementation below
+    Efgrid,Ekin,Etotal = pmod.GridIntegrate(E_j,Nx,dx,particlesVelocity,m_sp) # Diagnostic
     KineticEnergy[n] = Ekin
     ElectricFieldEnergy[n] = Efgrid
     TotalEnergy[n] = Etotal
+    plt.figure(PhaseSpaceFig.number)
+    for i in np.arange(N):
+        plt.scatter(particlesPosition[i],particlesVelocity[i])
     # axKin.scatter(n,Ekin)
     # axE.scatter(n,Efgrid)
     # axTot.scatter(n,Etotal)
     # pmod.Diagnostics(E_j,particlesVelocity,n,axes=[axKin,axE,axTot])
 
 t = np.linspace(0.0,float((Nt-1)*dt),Nt)
-plt.figure(diagFig.number)
-axKin.plot(t,KineticEnergy)
-axE.plot(t,ElectricFieldEnergy)
-axTot.plot(t,TotalEnergy)
+plt.figure(EnergyFig.number)
+plt.plot(t,KineticEnergy,t,ElectricFieldEnergy,t,TotalEnergy)
+# axKin.plot(t,KineticEnergy)
+# axE.plot(t,ElectricFieldEnergy)
+# axTot.plot(t,TotalEnergy)
 
 plt.show()

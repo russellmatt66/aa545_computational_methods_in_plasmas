@@ -94,7 +94,7 @@ def Findj(x_j,x_i):
     # time.sleep(pause)
     return guess
 
-def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_e):
+def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no velocity or current at the moment.
@@ -107,7 +107,7 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_e):
         dx - grid spacing
         L - length of grid
         rho_j - Nx x 1 array containing the charge density at each grid point
-        q_e - charge associated with each superparticle
+        q_sp - charge associated with the population of superparticles
     Outputs:
         rho_j - Nx x 1 array containing the charge density at each grid point
     Return Code:
@@ -126,14 +126,14 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_e):
             for i in np.arange(np.size(x_i)):
                 if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
                     count[j] += 1
-                rho_j[j] = q_e*float(count[j])/dx
+                rho_j[j] = q_sp*float(count[j])/dx
 
     if WeightingOrder == 1:
         rho_j[:] = 0.0
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
             jfound = Findj(x_j,x_i[i]) # binary search
-            rho_j[jfound] = q_e*(x_j[jfound+1] - x_i[i])/dx
-            rho_j[jfound+1] = q_e*(x_i[i] - x_j[jfound])/dx
+            rho_j[jfound] = q_sp*(x_j[jfound+1] - x_i[i])/dx
+            rho_j[jfound+1] = q_sp*(x_i[i] - x_j[jfound])/dx
 
     # Add contribution of static, uniform ion background s.t plasma is quasineutral
     rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)])+ (rho_j[0] + rho_j[Nx-1])*0.5)
@@ -284,16 +284,24 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n):
     x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
     return x_i, v_i
 
-def ComputeEnergies(E_j,v_i):
-    Efgrid = 0.0
-    KineticEnergy = 0.0
-    ETotal = 0.0
-    for j in np.arange(np.size(E_j)):
-        Efgrid = Efgrid + E_j[j]*E_j[j]/2.0
+def GridIntegrate(E_j,Nx,dx,v_i,m_sp):
+    """
+    Compute the grid-integrated electric field energy, kinetic energy, and their
+    sum
+    """
+    # Efgrid = 0.0
+    # KineticEnergy = 0.0
+    # ETotal = 0.0
+    # for j in np.arange(np.size(E_j)):
+    #     Efgrid = Efgrid + E_j[j]*E_j[j]/2.0
     # print("Grid-integrated Electric field energy is %f" %Efgrid)
-    for i in np.arange(np.size(v_i)):
-        KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
+    # for i in np.arange(np.size(v_i)):
+    #     KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
     # print("System kinetic energy is %f" %KineticEnergy)
+    """ Grid-Integrated """
+    E_j_squared = np.square(E_j)
+    Efgrid = dx*0.5*(0.5*(E_j[0]**2 + E_j[Nx-1]**2) + np.sum(E_j_squared[1:(Nx-2)]))
+    KineticEnergy = 0.5*m_sp*np.sum(np.square(v_i))
     ETotal = Efgrid + KineticEnergy
     return Efgrid,KineticEnergy,ETotal
 
