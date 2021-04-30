@@ -15,19 +15,34 @@ x_min = -np.pi
 x_max = np.pi
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
-N = 2
+N = 64
 
+""" Test Hexadecimal functions for N = 64 """
+particleColors = [None] * N
+black = '0x000000'
+white = '0xffffff'
+hexIncrement = hex(int((int(white,16)-int(black,16))/(N-1)))
+if(len(hexIncrement) != 8): # LSB = 0 was dropped and will cause expection later
+    hexIncrement = hexIncrement + "0" # so add it back
+print(hexIncrement)
+hexColor = '0x000000'
+
+for cidx in np.arange(N):
+    particleColors[cidx] = pmod.FormatHex(hexColor)
+    hexColor = pmod.AddHex(hexColor,hexIncrement)
+
+print(particleColors)
 """ Test Zero-Crossing """
-testTrajectory = np.sin(2.0*np.pi*x_grid)
-x_n = 0.0
-x_np1 = 0.0
-for idx in np.arange(np.size(x_grid)-1):
-    x_n = float(testTrajectory[idx])
-    x_np1 = float(testTrajectory[idx+1])
-    if(x_n > 0.0 and x_np1 < 0.0): # Check for Zero-Crossing
-        print("Zero-Crossing detected")
-    elif(x_n < 0.0 and x_np1 > 0.0): # Check for Zero-Crossing
-        print("Zero-Crossing detected")
+# testTrajectory = np.sin(2.0*np.pi*x_grid)
+# x_n = 0.0
+# x_np1 = 0.0
+# for idx in np.arange(np.size(x_grid)-1):
+#     x_n = float(testTrajectory[idx])
+#     x_np1 = float(testTrajectory[idx+1])
+#     if(x_n > 0.0 and x_np1 < 0.0): # Check for Zero-Crossing
+#         print("Zero-Crossing detected")
+#     elif(x_n < 0.0 and x_np1 > 0.0): # Check for Zero-Crossing
+#         print("Zero-Crossing detected")
 
 """ Test appending (for oscillation frequency calculation) """
 # Ntests_append = 10

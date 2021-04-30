@@ -25,8 +25,10 @@ ZeroInitialV = int(InitVector[3])
 # Colors for the scatterplot later
 particleColors = [None] * N
 black = '0x000000'
-white = '0xff00ff'
+white = '0xffffff'
 hexIncrement = hex(int((int(white,16)-int(black,16))/(N-1)))
+if(len(hexIncrement) != 8): # LSB = 0 was dropped and will cause expection later
+    hexIncrement = hexIncrement + "0" # so add it back
 hexColor = '0x000000'
 
 for cidx in np.arange(N):
@@ -84,6 +86,12 @@ if(N == 2 and ZeroInitialV == 1):
     particlesPosition[1] = np.pi/2.0
     particlesVelocity[0] = vprime
     particlesVelocity[1] = -vprime
+
+if(N == 64):
+    vprime = .01*v_th
+    for pidx in np.arange(N):
+        particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
+        particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
 
 for idx in np.arange(N):
     v_0i[idx] = float(particlesVelocity[idx])
@@ -159,9 +167,7 @@ for pidx in np.arange(N):
     omegaVariance[pidx,0] = omegaVariance[pidx,0]/NumberNonZeroEntries[pidx,0]
     print("With a variance of plus/minus %4.3f" %omegaVariance[pidx,0])
 
-print("The theoretical oscillation frequency for all particles is %4.3f" %omega_p)
-
-
+print("The theoretical oscillation frequency for each particle is %4.3f" %omega_p)
 
 t = np.linspace(0.0,float((Nt-1)*dt),Nt)
 plt.figure(EnergyFig.number)
@@ -178,6 +184,6 @@ plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
 plt.ylim((-6.0*v_th,6.0*v_th))
-plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$ and $N_{steps}$ = %i' %(WeightingOrder,vprime,Nt))
+plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$ and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,Nt))
 
 plt.show()

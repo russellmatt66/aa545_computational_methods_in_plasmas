@@ -44,6 +44,8 @@ def Initialize():
         print("ERROR: %i is larger than 64" %InitState[0])
         time.sleep(pause)
         AnomalyHandle()
+    if(InitState[0] == 64):
+        print("Initializing velocity perturbation as well")
 
     if InitState[0] == 2:
         print("Initial velocity or not? 0 for no, 1 for yes")
@@ -372,7 +374,10 @@ def FormatHex(hex2f):
     if(hex2f[0] != '0' and hex2f[1] != 'x'):
         print("Input to FormatHex() is incorrectly formatted")
         AnomalyHandle()
-    return "#" + hex2f[2:]
+    hex2f = "#" + hex2f[2:]
+    if(len(hex2f) != 7):
+        hex2f = hex2f + "0"    
+    return hex2f
 
 
 def AnomalyHandle():
