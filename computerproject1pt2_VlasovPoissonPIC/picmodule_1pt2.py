@@ -8,6 +8,7 @@ Module that contains the functions needed to complete 1D1V PIC simulation
 and obtain deliverables
 """
 import numpy as np
+from numba import jit
 from scipy import sparse as sp
 from scipy.sparse import linalg as la
 import matplotlib.pyplot as plt
@@ -108,7 +109,7 @@ def Findj(x_j,x_i):
         i += 1 # brakes
         if(i > int(np.sqrt(np.size(x_j)))):
             break
-    print("Search complete, index found is %i in %i iterations" %(guess,i))
+    # print("Search complete, index found is %i in %i iterations" %(guess,i))
     # time.sleep(pause)
     return guess
 
@@ -376,7 +377,7 @@ def FormatHex(hex2f):
         AnomalyHandle()
     hex2f = "#" + hex2f[2:]
     if(len(hex2f) != 7):
-        hex2f = hex2f + "0"    
+        hex2f = hex2f + "0"
     return hex2f
 
 

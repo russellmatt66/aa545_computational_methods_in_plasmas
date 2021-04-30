@@ -22,7 +22,7 @@ Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
 ZeroInitialV = int(InitVector[3])
 
-# Colors for the scatterplot later
+# Colors for the scatterplot later - ironically doesn't work for N = 64 case
 particleColors = [None] * N
 black = '0x000000'
 white = '0xffffff'
@@ -88,10 +88,20 @@ if(N == 2 and ZeroInitialV == 1):
     particlesVelocity[1] = -vprime
 
 if(N == 64):
-    vprime = .01*v_th
+    vprime = (1.0e-4)*v_th
     for pidx in np.arange(N):
         particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
         particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
+
+# InitialDistFig = plt.figure()
+# plt.figure(InitialDistFig.number)
+# plt.scatter(particlesPosition,particlesVelocity)
+# plt.xlabel('x')
+# plt.ylabel('v (normalized to $v_{th}$)')
+# plt.xlim((x_min,x_max))
+# plt.ylim((-2.0,2.0))
+#
+# plt.show()
 
 for idx in np.arange(N):
     v_0i[idx] = float(particlesVelocity[idx])
@@ -105,7 +115,7 @@ print("Closing Initialization Phase ...")
 """ PIC Phase """
 print("Beginning PIC Simulation")
 dt = 0.05*tau_plasma # [s]
-Nt = 300 # number of steps to take
+Nt = 500 # number of steps to take
 t0 = np.zeros((N,1),dtype=float) # for oscillation frequency computation
 ExpectedNumberOfPeriods = (Nt*dt)/tau_plasma
 SafetyFactor = 2 # Having more than twice the expected number of oscillations detected means period computation is junk anyways
@@ -123,49 +133,49 @@ for n in np.arange(Nt):
     ElectricFieldEnergy[n] = Efgrid
     TotalEnergy[n] = KineticEnergy[n] + ElectricFieldEnergy[n]
     plt.figure(PhaseSpaceFig.number)
+    plt.scatter(particlesPosition,particlesVelocity)
     for pidx in np.arange(N):
-        plt.scatter(particlesPosition[pidx],particlesVelocity[pidx],c=particleColors[pidx])
         v_n[pidx] = float(particlesVelocity[pidx]) # for oscillation frequency computation, float() is to break connection w/underlying array
     rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_sp)
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)
     particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n) # Particle Push
-    # Oscillation period calculation
+    # Oscillation period calculation - used to calculate oscillation frequency
+    if (N == 2): # keep running into errors w/N = 64 case
+        for pidx in np.arange(N):
+            v_np1[pidx] = float(particlesVelocity[pidx]) # updated position
+            if((v_n[pidx] - v_0i[pidx] > 0.0) and (v_np1[pidx] - v_0i[pidx] < 0.0)): # Check for Zero-Crossing
+                ZeroCross_count[pidx] += 1 # count it
+            elif((v_n[pidx] - v_0i[pidx] < 0.0) and (v_np1[pidx] - v_0i[pidx] > 0.0)): # Check for Zero-Crossing
+                ZeroCross_count[pidx] += 1 # count it
+            if(ZeroCross_count[pidx] == 2): # one oscillation period has elapsed!
+                tauTemp[pidx,0] = float(n*dt - t0[pidx,0]) # calculate value and store in container
+                numPeriod[pidx,0] += 1 # increment how many there have been for this particle
+                t0[pidx,0] = n*dt
+                ZeroCross_count[pidx] = 0
+                tauOscillation[pidx,numPeriod[pidx,0]] = tauTemp[pidx,0]
+
+# print(tauOscillation)
+# Calculate plasma frequency statistics
+if N == 2: # so far only works for N = 2 case, definitely spaghetti
+    omegaAverage = np.zeros((N,1),dtype=float)
+    omegaVariance = np.zeros((N,1),dtype=float)
+    NumberNonZeroEntries = np.zeros((N,1),dtype=int)
     for pidx in np.arange(N):
-        v_np1[pidx] = float(particlesVelocity[pidx]) # updated position
-        if((v_n[pidx] - v_0i[pidx] > 0.0) and (v_np1[pidx] - v_0i[pidx] < 0.0)): # Check for Zero-Crossing
-            print("Zero-Crossing detected")
-            ZeroCross_count[pidx] += 1 # count it
-        elif((v_n[pidx] - v_0i[pidx] < 0.0) and (v_np1[pidx] - v_0i[pidx] > 0.0)): # Check for Zero-Crossing
-            print("Zero-Crossing detected")
-            ZeroCross_count[pidx] += 1 # count it
-        if(ZeroCross_count[pidx] == 2): # one oscillation period has elapsed!
-            tauTemp[pidx,0] = float(n*dt - t0[pidx,0]) # calculate value and store in container
-            numPeriod[pidx,0] += 1 # increment how many there have been for this particle
-            t0[pidx,0] = n*dt
-            ZeroCross_count[pidx] = 0
-            tauOscillation[pidx,numPeriod[pidx,0]] = tauTemp[pidx,0]
+        for oidx in np.arange(np.size(tauOscillation,axis=1)-1):
+            if (tauOscillation[pidx,oidx] != 0.0):
+                omegaAverage[pidx,0] = omegaAverage[pidx,0] + 2.0*np.pi/tauOscillation[pidx,oidx]
+                NumberNonZeroEntries[pidx,0] += 1
+        omegaAverage[pidx,0] = omegaAverage[pidx,0]/NumberNonZeroEntries[pidx,0] # something TypeError about conversion to Python scalar
+        print("The average oscillation frequency for particle %i is %4.3f" %(pidx+1,omegaAverage[pidx,0]))
 
-print(tauOscillation)
-
-omegaAverage = np.zeros((N,1),dtype=float)
-omegaVariance = np.zeros((N,1),dtype=float)
-NumberNonZeroEntries = np.zeros((N,1),dtype=int)
-for pidx in np.arange(N):
-    for oidx in np.arange(np.size(tauOscillation,axis=1)-1):
-        if (tauOscillation[pidx,oidx] != 0.0):
-            omegaAverage[pidx,0] = omegaAverage[pidx,0] + 2.0*np.pi/tauOscillation[pidx,oidx]
-            NumberNonZeroEntries[pidx,0] += 1
-    omegaAverage[pidx,0] = omegaAverage[pidx,0]/NumberNonZeroEntries[pidx,0] # something TypeError about conversion to Python scalar
-    print("The average oscillation frequency for particle %i is %4.3f" %(pidx+1,omegaAverage[pidx,0]))
-
-for pidx in np.arange(N):
-    for oidx in np.arange(np.size(tauOscillation,axis=1)-1):
-        if (tauOscillation[pidx,oidx] != 0.0):
-            omegaVariance[pidx,0] = omegaVariance[pidx,0] + (2.0*np.pi/tauOscillation[pidx,oidx] - omegaAverage[pidx,0])**2
-    omegaVariance[pidx,0] = omegaVariance[pidx,0]/NumberNonZeroEntries[pidx,0]
-    print("With a variance of plus/minus %4.3f" %omegaVariance[pidx,0])
+    for pidx in np.arange(N):
+        for oidx in np.arange(np.size(tauOscillation,axis=1)-1):
+            if (tauOscillation[pidx,oidx] != 0.0):
+                omegaVariance[pidx,0] = omegaVariance[pidx,0] + (2.0*np.pi/tauOscillation[pidx,oidx] - omegaAverage[pidx,0])**2
+        omegaVariance[pidx,0] = omegaVariance[pidx,0]/NumberNonZeroEntries[pidx,0]
+        print("With a variance of plus/minus %4.3f" %omegaVariance[pidx,0])
 
 print("The theoretical oscillation frequency for each particle is %4.3f" %omega_p)
 
@@ -183,7 +193,7 @@ plt.figure(PhaseSpaceFig.number)
 plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
-plt.ylim((-6.0*v_th,6.0*v_th))
-plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$ and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,Nt))
+plt.ylim((-2.0,2.0))
+plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f\\tau_{p} and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt/tau_plasma,Nt))
 
 plt.show()
