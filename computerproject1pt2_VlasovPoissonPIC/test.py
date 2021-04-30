@@ -15,6 +15,21 @@ x_min = -np.pi
 x_max = np.pi
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
+N = 2
+
+""" Test Zero-Crossing """
+testTrajectory = np.sin(2.0*np.pi*x_grid)
+
+""" Test appending (for oscillation frequency calculation) """
+# Ntests_append = 10
+# tauOscillation = np.zeros((N,1)) # axis=1 will be the jth oscillation period
+# tauTemp = np.ones((N,1))
+# print(tauOscillation)
+# a = np.hstack((tauOscillation,tauTemp))
+# print(a)
+# for n in np.arange(Ntests_append):
+#     tauOscillation = np.hstack((tauOscillation,tauTemp))
+#     print(tauOscillation)
 
 """ Test Findj() """
 # Ntests_Findj = 10
@@ -32,29 +47,29 @@ dx = (x_max - x_min)/float(Nx)
 #     jfound_test = pmod.Findj(x_grid,x_i_test[i])
 
 """ Test AddHex() and FormatHex()"""
-hexA = '0x100d00'
-hexB = '0x020f00'
-print(pmod.AddHex(hexA,hexB))
-print(pmod.FormatHex(hexA))
-print(hexA)
+# hexA = '0x100d00'
+# hexB = '0x020f00'
+# print(pmod.AddHex(hexA,hexB))
+# print(pmod.FormatHex(hexA))
+# print(hexA)
 
 """ Test particleColors[:] creation """
-N = 2
-particleColors = [None] * N
-black = '0x000000'
-white = '0xffffff'
-hexIncrement = hex(int((int(white,16)-int(black,16))/N))
-print(hexIncrement)
-print(type(hexIncrement))
-hexColor = '0x000000'
-
-for cidx in np.arange(N):
-    print(hexColor)
-    particleColors[cidx] = hexColor
-    print(particleColors[cidx])
-    hexColor = pmod.AddHex(hexColor,hexIncrement)
-
-print(particleColors)
+# N = 2
+# particleColors = [None] * N
+# black = '0x000000'
+# white = '0xffffff'
+# hexIncrement = hex(int((int(white,16)-int(black,16))/(N-1)))
+# print(hexIncrement)
+# print(type(hexIncrement))
+# hexColor = '0x000000'
+#
+# for cidx in np.arange(N):
+#     print(hexColor)
+#     particleColors[cidx] = hexColor
+#     print(particleColors[cidx])
+#     hexColor = pmod.AddHex(hexColor,hexIncrement)
+#
+# print(particleColors)
 """ Trying to observe Lmtx structure """
 # Lmtx is exactly singular on first iteration 4 some reason
 # Lmtx = pmod.LaplacianStencil(Nx,dx)
