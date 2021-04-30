@@ -19,6 +19,15 @@ N = 2
 
 """ Test Zero-Crossing """
 testTrajectory = np.sin(2.0*np.pi*x_grid)
+x_n = 0.0
+x_np1 = 0.0
+for idx in np.arange(np.size(x_grid)-1):
+    x_n = float(testTrajectory[idx])
+    x_np1 = float(testTrajectory[idx+1])
+    if(x_n > 0.0 and x_np1 < 0.0): # Check for Zero-Crossing
+        print("Zero-Crossing detected")
+    elif(x_n < 0.0 and x_np1 > 0.0): # Check for Zero-Crossing
+        print("Zero-Crossing detected")
 
 """ Test appending (for oscillation frequency calculation) """
 # Ntests_append = 10
