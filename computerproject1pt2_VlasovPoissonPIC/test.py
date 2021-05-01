@@ -30,22 +30,24 @@ m_sp = qm*q_sp # mass associated with a particular superparticle given normaliza
 T = 1.0 # [eV]
 lambda_D = np.sqrt((eps_0 * T * L)/(N * q_sp **2))
 v_th = omega_p*lambda_D # thermal velocity
+print(v_th)
+print(1.0e-32*v_th)
 
 """ Test particle distribution Initialization for N = 64 """
-vprime = 0.01*v_th
-for pidx in np.arange(N):
-    particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
-    particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
-
-PhaseSpaceFig = plt.figure()
-plt.figure(PhaseSpaceFig.number)
-plt.scatter(particlesPosition,particlesVelocity)
-plt.xlabel('x')
-plt.ylabel('v (normalized to $v_{th}$)')
-plt.xlim((x_min,x_max))
-plt.ylim((-2.0,2.0))
-
-plt.show()
+# vprime = 0.01*v_th
+# for pidx in np.arange(N):
+#     particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
+#     particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
+#
+# PhaseSpaceFig = plt.figure()
+# plt.figure(PhaseSpaceFig.number)
+# plt.scatter(particlesPosition,particlesVelocity)
+# plt.xlabel('x')
+# plt.ylabel('v (normalized to $v_{th}$)')
+# plt.xlim((x_min,x_max))
+# plt.ylim((-2.0,2.0))
+#
+# plt.show()
 
 """ Test Hexadecimal functions for N = 64 """
 # particleColors = [None] * N

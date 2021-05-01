@@ -88,7 +88,7 @@ if(N == 2 and ZeroInitialV == 1):
     particlesVelocity[1] = -vprime
 
 if(N == 64):
-    vprime = (1.0e-4)*v_th
+    vprime = (1.0e-32)*v_th
     for pidx in np.arange(N):
         particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
         particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
@@ -114,8 +114,8 @@ print("Closing Initialization Phase ...")
 
 """ PIC Phase """
 print("Beginning PIC Simulation")
-dt = 0.05*tau_plasma # [s]
-Nt = 500 # number of steps to take
+dt = 0.001*tau_plasma # [s]
+Nt = 5000 # number of steps to take
 t0 = np.zeros((N,1),dtype=float) # for oscillation frequency computation
 ExpectedNumberOfPeriods = (Nt*dt)/tau_plasma
 SafetyFactor = 2 # Having more than twice the expected number of oscillations detected means period computation is junk anyways
@@ -194,6 +194,6 @@ plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
 plt.ylim((-2.0,2.0))
-plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f\\tau_{p} and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt/tau_plasma,Nt))
+plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f$\\tau_{p}$ and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt/tau_plasma,Nt))
 
 plt.show()
