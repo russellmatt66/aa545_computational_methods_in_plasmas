@@ -81,14 +81,15 @@ if (N == 2 and ZeroInitialV == 0):
     particlesVelocity[1] = -vprime
 
 if(N == 2 and ZeroInitialV == 1):
-    vprime = 1.0*v_th
+    vprime = (.25)*v_th
     particlesPosition[0] = -np.pi/2.0
     particlesPosition[1] = np.pi/2.0
     particlesVelocity[0] = vprime
     particlesVelocity[1] = -vprime
 
 if(N == 64):
-    vprime = (1.0e-32)*v_th
+    vprime = 0.0
+    # vprime = (1.0e-4)*v_th
     for pidx in np.arange(N):
         particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
         particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
@@ -114,7 +115,8 @@ print("Closing Initialization Phase ...")
 
 """ PIC Phase """
 print("Beginning PIC Simulation")
-dt = 0.001*tau_plasma # [s]
+dt = 0.001*tau_plasma #
+# dt = 0.2/omega_p #
 Nt = 5000 # number of steps to take
 t0 = np.zeros((N,1),dtype=float) # for oscillation frequency computation
 ExpectedNumberOfPeriods = (Nt*dt)/tau_plasma
@@ -126,6 +128,7 @@ KineticEnergy = np.zeros(Nt)
 ElectricFieldEnergy = np.zeros(Nt)
 TotalEnergy = KineticEnergy + ElectricFieldEnergy
 
+""" Simulation Loop """
 for n in np.arange(Nt):
     print("Taking step %i" %n)
     Efgrid,Ekin,Etotal = pmod.GridIntegrate(E_j,Nx,dx,particlesVelocity,m_sp) # Diagnostic
@@ -133,14 +136,14 @@ for n in np.arange(Nt):
     ElectricFieldEnergy[n] = Efgrid
     TotalEnergy[n] = KineticEnergy[n] + ElectricFieldEnergy[n]
     plt.figure(PhaseSpaceFig.number)
-    plt.scatter(particlesPosition,particlesVelocity)
+    plt.scatter(particlesPosition,particlesVelocity,s=5)
     for pidx in np.arange(N):
         v_n[pidx] = float(particlesVelocity[pidx]) # for oscillation frequency computation, float() is to break connection w/underlying array
     rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_sp)
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
-    particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid)
-    particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n) # Particle Push
+    particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid,Nx)
+    particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n,x_min,x_max) # Particle Push
     # Oscillation period calculation - used to calculate oscillation frequency
     if (N == 2): # keep running into errors w/N = 64 case
         for pidx in np.arange(N):
@@ -157,7 +160,7 @@ for n in np.arange(Nt):
                 tauOscillation[pidx,numPeriod[pidx,0]] = tauTemp[pidx,0]
 
 # print(tauOscillation)
-# Calculate plasma frequency statistics
+""" Calculate plasma frequency and statistics """
 if N == 2: # so far only works for N = 2 case, definitely spaghetti
     omegaAverage = np.zeros((N,1),dtype=float)
     omegaVariance = np.zeros((N,1),dtype=float)

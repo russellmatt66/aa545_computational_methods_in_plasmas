@@ -123,6 +123,7 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
         x_i - N x 1 array containing the particle locations, i.e, particlesPosition
         N - Number of Particles
         x_j - Nx x 1 array representing the spatial grid
+        Nx - Number of grid points
         dx - grid spacing
         L - length of grid
         rho_j - Nx x 1 array containing the charge density at each grid point
@@ -151,11 +152,12 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
         rho_j[:] = 0.0
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
             jfound = Findj(x_j,x_i[i]) # binary search
-            rho_j[jfound] = q_sp*(x_j[jfound+1] - x_i[i])/dx
-            rho_j[jfound+1] = q_sp*(x_i[i] - x_j[jfound])/dx
+            jfoundp1 = (jfound + 1) % Nx
+            rho_j[jfound] = q_sp*(x_j[jfoundp1] - x_i[i])/dx
+            rho_j[jfoundp1] = q_sp*(x_i[i] - x_j[jfound])/dx
 
     # Add contribution of static, uniform ion background s.t plasma is quasineutral
-    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)])+ (rho_j[0] + rho_j[Nx-1])*0.5)
+    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)]) + (rho_j[0] + rho_j[Nx-1])*0.5)
     rho_j = rho_j + rho_background
     # rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
@@ -235,7 +237,7 @@ def FirstDerivativeStencil(Nx,dx):
     FDmtx = sp.csr_matrix(FDmtx)
     return FDmtx
 
-def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
+def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j,Nx):
     """
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether
@@ -245,6 +247,7 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
         E_j - Nx x 1 array containing the values of the electric field on the grid
         x_i - N x 1 array containing the positions of the particles
         x_j - Nx x 1 array containing the grid points
+        Nx - Number of grid points
     Outputs:
         E_i
     """
@@ -262,7 +265,8 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
     if WeightingOrder == 1:
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
             jfound = Findj(x_j,x_i[i])
-            E_i[i] = ((x_j[jfound+1] - x_i[i])/dx)*E_j[jfound] + ((x_i[i] - x_j[jfound])/dx)*E_j[jfound+1]
+            jfoundp1 = (jfound + 1) % Nx # handles jfound == Nx-1 and returns jfound + 1 for all else
+            E_i[i] = ((x_j[jfoundp1] - x_i[i])/dx)*E_j[jfound] + ((x_i[i] - x_j[jfound])/dx)*E_j[jfoundp1]
             # for j in np.arange(np.size(x_j)): # Search algorithm here could be better
             #     if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
 
@@ -270,9 +274,9 @@ def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j):
 
 def EulerStep(dt,E_i,v_i,qm):
     """
-    Function used for half-step to start Leap-Frog method
+    Euler half-step to start Leap-Frog method
     Inputs:
-        dt - Time step
+        dt - Time step, Advance is Forward or Backward depending on sgn(dt)
         E_i - N x 1 array containing the values of the electric field experienced
             by each of the different particles
         v_i - N x 1 array containing the velocity of the different particles at t = 0 = t_{0}
@@ -283,7 +287,7 @@ def EulerStep(dt,E_i,v_i,qm):
     v_i = v_i + qm*dt*E_i
     return v_i
 
-def LeapFrog(x_i,v_i,E_i,dt,qm,n):
+def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
     """
     Function to compute the particle advance using the Leapfrog algorithm
     Inputs:
@@ -292,15 +296,24 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n):
         dt - Time step
         qm - charge-to-mass ratio of the superparticles
         n - Time level
+        X_min - x_grid[0], for periodic
+        X_max - x_grid[Nx-1], for periodic
     Outputs:
         x_i - x_i(t_{n}), N x 1 array of particles positions at t = t_{n} = n*dt
         v_i - v_i(t_{n+1/2})
     """
-    if n == 0: # First step requires a half-step for the velocity
-        v_i = EulerStep(dt/2.0,E_i,v_i,qm)# dt -> dt/2.0 so that it's a half-step
-        x_i = x_i + dt*v_i
+    if n == 0: # First step requires an initial velocity half-step to begin
+        v_i = EulerStep(-dt/2.0,E_i,v_i,qm)# half-step backwards gives v_i(t_{-1/2}) to begin
+        # x_i = x_i + dt*v_i - Artifact of Forward Euler half=step
     v_i = v_i + qm*dt*E_i # v_i(t_{n+1/2}) = v_i(t_{n-1/2}) + (q/m)*dt*E_i
     x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
+    for pidx in np.arange(np.size(x_i)):
+        if(x_i[pidx] > X_max): # particle exited grid via right boundary
+            Dx = x_i[pidx] - X_max
+            x_i[pidx] = X_min + Dx
+        if(x_i[pidx] < X_min):# particle exited grid via left boundary
+            Dx = x_i[pidx] - X_min
+            x_i[pidx] = X_max + Dx
     return x_i, v_i
 
 """ Diagnostics """
