@@ -67,7 +67,7 @@ omega_p = 1.0 # plasma frequency
 tau_plasma = 2.0*np.pi/omega_p
 q_sp = eps_0 * omega_p**2 * (L/float(N)) / qm# charge associated with a superparticle given normalization - population assumed uniform
 m_sp = qm*q_sp # mass associated with a particular superparticle given normalization - population assumed uniform
-T = 1.0 # [eV]
+T = 1.0e-10 # [eV]
 lambda_D = np.sqrt((eps_0 * T * L)/(N * q_sp **2))
 v_th = omega_p*lambda_D # thermal velocity
 
@@ -81,17 +81,17 @@ if (N == 2 and ZeroInitialV == 0):
     particlesVelocity[1] = -vprime
 
 if(N == 2 and ZeroInitialV == 1):
-    vprime = (.25)*v_th
+    vprime = (0.01)*v_th
     particlesPosition[0] = -np.pi/2.0
     particlesPosition[1] = np.pi/2.0
     particlesVelocity[0] = vprime
     particlesVelocity[1] = -vprime
 
-if(N == 64):
+if(N != 2):
     vprime = 0.0
     # vprime = (1.0e-4)*v_th
     for pidx in np.arange(N):
-        particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
+        particlesPosition[pidx] = x_min/2.0 + float(pidx)*x_max/float(N-1)
         particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
 
 # InitialDistFig = plt.figure()

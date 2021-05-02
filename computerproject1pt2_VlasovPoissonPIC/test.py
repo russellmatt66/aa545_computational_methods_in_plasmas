@@ -16,7 +16,7 @@ x_max = np.pi
 L = x_max - x_min
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
-N = 64
+N = 4
 particlesPosition = np.zeros((N,1),dtype=float)
 particlesVelocity = np.zeros((N,1),dtype=float)
 
@@ -34,20 +34,20 @@ print(v_th)
 print(1.0e-32*v_th)
 
 """ Test particle distribution Initialization for N = 64 """
-# vprime = 0.01*v_th
-# for pidx in np.arange(N):
-#     particlesPosition[pidx] = x_min + float(pidx)*L/float(N-1)
-#     particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
-#
-# PhaseSpaceFig = plt.figure()
-# plt.figure(PhaseSpaceFig.number)
-# plt.scatter(particlesPosition,particlesVelocity)
-# plt.xlabel('x')
-# plt.ylabel('v (normalized to $v_{th}$)')
-# plt.xlim((x_min,x_max))
-# plt.ylim((-2.0,2.0))
-#
-# plt.show()
+vprime = 0.01*v_th
+for pidx in np.arange(N):
+    particlesPosition[pidx] = x_min/2.0 + float(pidx)*x_max/float(N-1)
+    particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
+
+PhaseSpaceFig = plt.figure()
+plt.figure(PhaseSpaceFig.number)
+plt.scatter(particlesPosition,particlesVelocity)
+plt.xlabel('x')
+plt.ylabel('v (normalized to $v_{th}$)')
+plt.xlim((x_min,x_max))
+plt.ylim((-2.0,2.0))
+
+plt.show()
 
 """ Test Hexadecimal functions for N = 64 """
 # particleColors = [None] * N
