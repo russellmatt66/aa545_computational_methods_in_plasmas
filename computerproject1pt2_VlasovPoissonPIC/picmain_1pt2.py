@@ -16,7 +16,6 @@ print("Opening Initialization Phase ...")
 
 print("Calling pmod.Initialize()")
 InitVector = pmod.Initialize()
-# Don't know of another way to get rid of view
 N = int(InitVector[0]) # number of particles
 Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
