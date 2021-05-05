@@ -113,6 +113,8 @@ for idx in np.arange(N):
 # diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
 EnergyFig = plt.figure()
 PhaseSpaceFig = plt.figure()
+FieldFig = plt.figure()
+ChargeDensityFig = plt.figure()
 
 print("Closing Initialization Phase ...")
 
@@ -143,8 +145,16 @@ for n in np.arange(Nt):
     for pidx in np.arange(N):
         v_n[pidx] = float(particlesVelocity[pidx]) # for oscillation frequency computation, float() is to break connection w/underlying array
     rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_sp)
+    if n == 0:
+        plt.figure(ChargeDensityFig.number)
+        plt.plot(x_grid,rho_j)
+        plt.title('Grid charge density, N = %i particles, n = %i step' %(N,n))
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx,Nx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
+    if n == 0:
+        plt.figure(FieldFig.number)
+        plt.plot(x_grid,E_j)
+        plt.title('Grid electric field, N = %i particles, n = %i step' %(N,n))
     particlesField = pmod.ForceWeighting(WeightingOrder,dx,particlesField,E_j,particlesPosition,x_grid,Nx)
     particlesPosition, particlesVelocity = pmod.LeapFrog(particlesPosition,particlesVelocity,particlesField,dt,qm,n,x_min,x_max) # Particle Push
     # Oscillation period calculation - used to calculate oscillation frequency
@@ -201,5 +211,15 @@ plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
 # plt.ylim((-2.0,2.0))
 plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt,Nt))
+
+plt.figure(ChargeDensityFig.number)
+plt.xlabel('x')
+plt.ylabel('$\\rho$')
+plt.xlim((x_min,x_max))
+
+plt.figure(FieldFig.number)
+plt.xlabel('x')
+plt.ylabel('E')
+plt.xlim((x_min,x_max))
 
 plt.show()
