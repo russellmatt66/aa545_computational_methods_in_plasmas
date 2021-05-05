@@ -389,10 +389,17 @@ def FormatHex(hex2f):
         print("Input to FormatHex() is incorrectly formatted")
         AnomalyHandle()
     hex2f = "#" + hex2f[2:]
-    if(len(hex2f) != 7):
+    if(len(hex2f) == 6):
         hex2f = hex2f + "0"
+    if(len(hex2f) == 8):
+        hex2f = hex2f[0:7]
     return hex2f
 
+def UnFormatHex(hex2unf):
+    """
+    """
+    hex2unf = "0x" + hex2unf[2:]
+    return hex2unf
 
 def AnomalyHandle():
     print("Please rerun the program")

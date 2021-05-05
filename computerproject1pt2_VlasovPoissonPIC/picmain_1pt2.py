@@ -26,12 +26,16 @@ particleColors = [None] * N
 black = '0x000000'
 white = '0xffffff'
 hexIncrement = hex(int((int(white,16)-int(black,16))/(N-1)))
-if(len(hexIncrement) != 8): # LSB = 0 was dropped and will cause expection later
+if(len(hexIncrement) != 8): # LSB = 0 was dropped and will cause exception later
     hexIncrement = hexIncrement + "0" # so add it back
-hexColor = '0x000000'
 
+hexColor = '0x000000'
+print(hexColor)
 for cidx in np.arange(N):
     particleColors[cidx] = pmod.FormatHex(hexColor)
+    print(hexColor)
+    # hexColor = pmod.UnFormatHex(hexColor)
+    # print(hexColor)
     hexColor = pmod.AddHex(hexColor,hexIncrement)
 
 particlesPosition = np.zeros((N,1),dtype=float)
@@ -66,7 +70,7 @@ omega_p = 1.0 # plasma frequency
 tau_plasma = 2.0*np.pi/omega_p
 q_sp = eps_0 * omega_p**2 * (L/float(N)) / qm# charge associated with a superparticle given normalization - population assumed uniform
 m_sp = qm*q_sp # mass associated with a particular superparticle given normalization - population assumed uniform
-T = 1.0e-10 # [eV]
+T = 1.0 # [eV]
 lambda_D = np.sqrt((eps_0 * T * L)/(N * q_sp **2))
 v_th = omega_p*lambda_D # thermal velocity
 
@@ -87,10 +91,10 @@ if(N == 2 and ZeroInitialV == 1):
     particlesVelocity[1] = -vprime
 
 if(N != 2):
+    # vprime = 0.001*v_th
     vprime = 0.0
-    # vprime = (1.0e-4)*v_th
     for pidx in np.arange(N):
-        particlesPosition[pidx] = x_min/2.0 + float(pidx)*x_max/float(N-1)
+        particlesPosition[pidx] = (x_min + dx) + float(pidx)*2.0*(x_max + dx)/float(N-1)
         particlesVelocity[pidx] = vprime*np.sin(2.0*np.pi/L * particlesPosition[pidx])
 
 # InitialDistFig = plt.figure()
@@ -114,9 +118,9 @@ print("Closing Initialization Phase ...")
 
 """ PIC Phase """
 print("Beginning PIC Simulation")
-dt = 0.001*tau_plasma #
-# dt = 0.2/omega_p #
-Nt = 5000 # number of steps to take
+# dt = 0.032*tau_plasma #
+dt = 0.2/omega_p #
+Nt = 100 # number of steps to take
 t0 = np.zeros((N,1),dtype=float) # for oscillation frequency computation
 ExpectedNumberOfPeriods = (Nt*dt)/tau_plasma
 SafetyFactor = 2 # Having more than twice the expected number of oscillations detected means period computation is junk anyways
@@ -135,7 +139,7 @@ for n in np.arange(Nt):
     ElectricFieldEnergy[n] = Efgrid
     TotalEnergy[n] = KineticEnergy[n] + ElectricFieldEnergy[n]
     plt.figure(PhaseSpaceFig.number)
-    plt.scatter(particlesPosition,particlesVelocity,s=5)
+    plt.scatter(particlesPosition,particlesVelocity,s=5,c=particleColors)
     for pidx in np.arange(N):
         v_n[pidx] = float(particlesVelocity[pidx]) # for oscillation frequency computation, float() is to break connection w/underlying array
     rho_j = pmod.ParticleWeighting(WeightingOrder,particlesPosition,N,x_grid,Nx,dx,L,rho_j,q_sp)
@@ -189,13 +193,13 @@ plt.plot(t,TotalEnergy,label="Total")
 plt.legend()
 plt.xlabel('Time')
 plt.ylabel('Energy')
-plt.title('System Energy History for %i-Order Weighting, $\Delta t$ = %4.3f$\\tau_{p}$, and $N_{steps}$ = %i' %(WeightingOrder,dt/tau_plasma,Nt))
+plt.title('System Energy History for %i-Order Weighting, $v^{\'}$ = %4.3f$v_{th}$, $\Delta t = %4.3f$, and $N_{steps} = %i$' %(WeightingOrder,vprime/v_th,dt,Nt))
 
 plt.figure(PhaseSpaceFig.number)
 plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
-plt.ylim((-2.0,2.0))
-plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f$\\tau_{p}$ and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt/tau_plasma,Nt))
+# plt.ylim((-2.0,2.0))
+plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt,Nt))
 
 plt.show()
