@@ -8,21 +8,25 @@ MHD code
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import fluxfcndefn as flux
+import FluxFcnDefn as Flux
+from InitialCondDefn import InitialCond as IC
 
 """ Grid Generation """
 spacing = 1.0 # Grid spacing - relative to radius of the plasma
 dx = spacing
 dy = spacing
-dz = spacing
+dz = spacing # Cartesian - 3D
 num_Nodes = 100
 Nx = Nodes
 Ny = Nodes
-Nz = Nodes
+Nz = Nodes # Uniform Box
 
 num_ConservedQuantities = 8
 
 SimulationData = np.zeros((Nx,Ny,Nz,num_ConservedQuantities))
+Flux_F = np.zeros((Nx,Ny,Nz,num_ConservedQuantities))
+Flux_G = np.zeros((Nx,Ny,Nz,num_ConservedQuantities))
+Flux_H = np.zeros((Nx,Ny,Nz,num_ConservedQuantities))
 
 """ """
 # L = float(spacing*num_Nodes)
