@@ -19,7 +19,7 @@ InitVector = pmod.Initialize()
 N = int(InitVector[0]) # number of particles
 Nx = int(InitVector[1]) + 1 # number of grid points = Ncells + 1
 WeightingOrder = int(InitVector[2]) # 0th or 1st order weighting
-ZeroInitialV = int(InitVector[3])
+InitialV = int(InitVector[3])
 
 # Colors for the scatterplot later - ironically doesn't work for N = 64 case
 particleColors = [None] * N
@@ -79,7 +79,7 @@ print("Initalizing Particle Distribution")
 if (N == 2 and ZeroInitialV == 0):
     vprime = 0.0 # to make the presentation of results more uniform
     particlesPosition[0] = -np.pi/4.0
-    particlesPosition[1] = np.pi/4.0 
+    particlesPosition[1] = np.pi/4.0
     particlesVelocity[0] = vprime
     particlesVelocity[1] = -vprime
 

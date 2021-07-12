@@ -8,12 +8,12 @@ Module that contains the functions needed to complete 1D1V PIC simulation
 and obtain deliverables
 """
 import numpy as np
-from numba import jit
-from scipy import sparse as sp
-from scipy.sparse import linalg as la
 import matplotlib.pyplot as plt
 import time
 import sys
+from numba import jit
+from scipy import sparse as sp
+from scipy.sparse import linalg as la
 
 """ Basic Parameters """
 pause = 1.0
@@ -25,56 +25,52 @@ def Initialize():
     """
     InitState - 4x1 column vector containing:
         N = InitState[0], the number of particles to be used in the simulation
-        Nx = InitState[1], the number of grid points " " " " " "
-        WeightingOrder = InitState[2], Z \in {0,1} representing 0th- or 1st-
-                                        order weighting for charge and forces.
-        ZeroInitialV = InitState[3], flag for the N = 2 case
+        Ncells = InitState[1], the number of grid cells " " " " " "
+        WeightingOrder = InitState[2], \textit{a} \in {0,1} representing the choice of
+                                        0th- or 1st-order weighting for charge and forces.
+        InitialV = InitState[3], flag for whether to initialize a velocity perturbation on the particle distribution
     """
     print("pmod.Initialize() executing ...")
-    # I can't think of a better way to store this information
-
-    InitState = np.empty((4,1),dtype=int)
     print("Please enter the number of particles to simulate")
     print("The number must be a power of 2 and cannot be larger than 64")
-    InitState[0] = int(input(''))
-    if(InitState[0] % 2 != 0):
-        print("ERROR: %i is not a power of 2" %InitState[0])
-        time.sleep(pause)
-        AnomalyHandle()
-    if(InitState[0] > 64):
-        print("ERROR: %i is larger than 64" %InitState[0])
-        time.sleep(pause)
-        AnomalyHandle()
-    if(InitState[0] == 64):
-        print("Initializing velocity perturbation as well")
 
-    if InitState[0] == 2:
-        print("Initial velocity or not? 0 for no, 1 for yes")
-        InitState[3] = int(input(''))
-        if(InitState[3] != 0 and InitState[3] != 1):
-            print("ERROR: %i is not 0 or 1" %InitState[3])
+    N = int(input(''))
+
+    if(N % 2 != 0):
+        print("ERROR: %i is not a power of 2" %N)
+        time.sleep(pause)
+        AnomalyHandle()
+    if(N > 64):
+        print("ERROR: %i is larger than 64" %N)
+        time.sleep(pause)
+        AnomalyHandle()
+    if N == 2:
+        print("For the N = 2 case do you want to initialize a velocity perturbation? 0 for no, 1 for yes")
+        InitialV = int(input(''))
+        if(InitialV != 0 and InitialV != 1):
+            print("ERROR: value of %i is not 0 or 1" %InitialV)
             time.sleep(pause)
             AnomalyHandle()
-    elif InitState[0] != 2:
-        InitState[3] = -1
+    if(N == 64):
+        print("Initializing a velocity perturbation for the N = 64 case")
+        InitialV = 1
 
-    print("Please enter the desired number of grid CELLS for the mesh (must be a power of 2).")
-    print("Note that this will be one less than the number of grid POINTS:")
-    InitState[1] = int(input(''))
-    if(InitState[1] % 2 != 0):
-        print("ERROR: %i is not a power of 2" %InitState[1])
-        time.sleep(pause)
-        AnomalyHandle()
+    Ncells = 32 # Number of grid cells. NumGridPoints: Nx = Nc + 1
 
     print("Please enter 0 for 0th-order charge/force weighting or 1 for 1st-order:")
-    InitState[2] = int(input(''))
-    if(InitState[2] != 0 and InitState[2] != 1):
+    WeightingOrder = int(input(''))
+    if(WeightingOrder != 0 and WeightingOrder != 1):
         print("ERROR: The entry for charge/force weighting must be either 0 or 1")
         time.sleep(pause)
         AnomalyHandle()
 
+    # I can't think of a better way to store this information
+    InitState = np.empty((4,1),dtype=int)
+    InitState[0] = N
+    InitState[1] = Ncells
+    InitState[2] = WeightingOrder
+    InitState[3] = InitialV
     print("pmod.Initialize() execution complete ...")
-    print(InitState)
     return InitState
 
 """
