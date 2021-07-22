@@ -44,7 +44,7 @@ def Initialize():
         print("ERROR: %i is larger than 64" %N)
         time.sleep(pause)
         AnomalyHandle()
-    if N == 2:
+    if(N == 2):
         print("For the N = 2 case do you want to initialize a velocity perturbation? 0 for no, 1 for yes")
         InitialV = int(input(''))
         if(InitialV != 0 and InitialV != 1):
@@ -72,11 +72,6 @@ def Initialize():
     InitState[3] = InitialV
     print("pmod.Initialize() execution complete ...")
     return InitState
-
-"""
-Grid Generation: Left out for moment due to simplicity
-"""
-# def GridGeneration():
 
 def Findj(x_j,x_i):
     """
@@ -112,7 +107,7 @@ def Findj(x_j,x_i):
 def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
-    Electrostatic -> no velocity or current at the moment.
+    Electrostatic -> no current at the moment.
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
@@ -158,7 +153,7 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
     # rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
 
-def PotentialSolveES(rho_j,Lmtx,Nx):
+def PotentialSolveES(rho_j,Lmtx):
     """
     Function to solve for the electric potential on the grid, phi_j
     Inputs:
@@ -183,9 +178,12 @@ def FieldSolveES(phi_j,FDmtx):
     E_j = FDmtx @ phi_j
     return E_j
 
-def LaplacianStencil(Nx,dx):
+def LaplacianStencil(Nx,dx,eps_0):
     """
     Output is used as an argument for PotentialSolve()
+    B.Cs: Periodic
+    Gauge: phi[0] = 0
+    Discretization: Finite Difference
     Inputs:
         Nx - Number of grid points
         dx - Grid spacing
@@ -193,9 +191,6 @@ def LaplacianStencil(Nx,dx):
         Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
     Governing Equations:
         (1) Gauss' Law -> Poisson's Equation
-    B.Cs: Periodic
-    Gauge: phi[0] = 0
-    Discretization: Finite Difference
     """
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
@@ -205,22 +200,23 @@ def LaplacianStencil(Nx,dx):
     # Lmtx[0,0] = 0.0, linearly dependent column space => singular matrix
     # Lmtx[1,0] = 0.0
     # Lmtx[Nx-1,0] = 0.0
-    Lmtx[0,Nx-1] = 1.0
-    Lmtx /= dx**2
+    Lmtx[0,Nx-1] = -1.0
+    LaplPreFactor = eps_0 * dx**2
+    Lmtx /= LaplPreFactor
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
 
 def FirstDerivativeStencil(Nx,dx):
     """
     Output is used as an argument for FieldSolve()
+    Governing Equations:
+        (1) E = -grad(phi) => E = -d(phi)/dx
+    Discretization: Central Difference
     Inputs:
         Nx - Number of grid points
         dx - Grid spacing
     Outputs:
         FDmtx - Nx x Nx matrix for calculating first derivative of potential
-    Governing Equations:
-        (1) E = -grad(phi) => E = -d(phi)/dx
-    Discretization: Central Difference
     """
     v = np.ones(Nx)
     diags = np.array([-1,0,1])
@@ -233,7 +229,7 @@ def FirstDerivativeStencil(Nx,dx):
     FDmtx = sp.csr_matrix(FDmtx)
     return FDmtx
 
-def ForceWeighting(WeightingOrder,dx,E_i,E_j,x_i,x_j,Nx):
+def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
     """
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether

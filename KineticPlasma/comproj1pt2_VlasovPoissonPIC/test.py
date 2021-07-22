@@ -126,6 +126,7 @@ plt.show()
 #     hexColor = pmod.AddHex(hexColor,hexIncrement)
 #
 # print(particleColors)
+
 """ Trying to observe Lmtx structure """
 # Lmtx is exactly singular on first iteration 4 some reason
 # Lmtx = pmod.LaplacianStencil(Nx,dx)
