@@ -147,36 +147,10 @@ def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
             rho_j[jfound] = q_sp*(x_j[jfoundp1] - x_i[i])/dx
             rho_j[jfoundp1] = q_sp*(x_i[i] - x_j[jfound])/dx
 
-    # Add contribution of static, uniform ion background s.t plasma is quasineutral
-    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)]) + (rho_j[0] + rho_j[Nx-1])*0.5)
+    # Add contribution of static, uniform ion background s.t plasma is quasineutra
+    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)]) + (rho_j[0] + rho_j[Nx-1]))
     rho_j = rho_j + rho_background
-    # rho_j = rho_j + q_background*float(N)/float(x_j[np.size(x_j)-1]-x_j[0])
     return rho_j
-
-def PotentialSolveES(rho_j,Lmtx):
-    """
-    Function to solve for the electric potential on the grid, phi_j
-    Inputs:
-        rho_j - Nx x 1 array containing the charge density at each grid point
-        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
-        Nx - number of grid points
-    Outputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
-    """
-    phi_j = la.spsolve(Lmtx,rho_j)
-    return phi_j
-
-def FieldSolveES(phi_j,FDmtx):
-    """
-    Function to solve for the electric field on the grid, E_j.
-    Inputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
-        FDmtx - Nx x Nx matrix for calculating first derivative on the grid
-    Outputs:
-        E_j - Nx x 1 array containing the value of the  electric field at each grid point
-    """
-    E_j = FDmtx @ phi_j
-    return E_j
 
 def LaplacianStencil(Nx,dx,eps_0):
     """
@@ -206,6 +180,19 @@ def LaplacianStencil(Nx,dx,eps_0):
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
 
+def PotentialSolveES(rho_j,Lmtx):
+    """
+    Function to solve for the electric potential on the grid, phi_j
+    Inputs:
+        rho_j - Nx x 1 array containing the charge density at each grid point
+        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
+        Nx - number of grid points
+    Outputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+    """
+    phi_j = la.spsolve(Lmtx,rho_j)
+    return phi_j
+
 def FirstDerivativeStencil(Nx,dx):
     """
     Output is used as an argument for FieldSolve()
@@ -228,6 +215,18 @@ def FirstDerivativeStencil(Nx,dx):
     FDmtx /= 2.0*dx
     FDmtx = sp.csr_matrix(FDmtx)
     return FDmtx
+
+def FieldSolveES(phi_j,FDmtx):
+    """
+    Function to solve for the electric field on the grid, E_j.
+    Inputs:
+        phi_j - Nx x 1 array containing the electric potential at each grid point
+        FDmtx - Nx x Nx matrix for calculating first derivative on the grid
+    Outputs:
+        E_j - Nx x 1 array containing the value of the  electric field at each grid point
+    """
+    E_j = FDmtx @ phi_j
+    return E_j
 
 def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
     """
@@ -309,6 +308,21 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
     return x_i, v_i
 
 """ Diagnostics """
+def ComputeElectricFieldEnergy(E_j,Nx,dx):
+    """
+    Compute the grid-integrated electric field energy
+    """
+    E_j_sq = np.square(E_j)
+    PEgrid = dx*0.5*(0.5*(E_j[0]**2 + E_j[Nx-1]**2)+np.sum(E_j_sq[1:(Nx-2)]))
+    return PEgrid
+
+def ComputeKineticEnergy(v_i,m_sp):
+    """ 
+    Compute the system kinetic energy
+    """
+    KE = 0.5*m_sp*np.sum(np.square(v_i))
+    return KE
+                            
 def GridIntegrate(E_j,Nx,dx,v_i,m_sp):
     """
     Compute the grid-integrated electric field energy, kinetic energy, and their
