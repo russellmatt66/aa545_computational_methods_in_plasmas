@@ -44,16 +44,12 @@ def Initialize():
         print("ERROR: %i is larger than 64" %N)
         time.sleep(pause)
         AnomalyHandle()
-    if(N == 2):
-        print("For the N = 2 case do you want to initialize a velocity perturbation? 0 for no, 1 for yes")
-        InitialV = int(input(''))
-        if(InitialV != 0 and InitialV != 1):
-            print("ERROR: value of %i is not 0 or 1" %InitialV)
-            time.sleep(pause)
-            AnomalyHandle()
-    if(N == 64):
-        print("Initializing a velocity perturbation for the N = 64 case")
-        InitialV = 1
+    print("Do you want to initialize a velocity perturbation? 0 for no, 1 for yes")
+    InitialV = int(input(''))
+    if(InitialV != 0 and InitialV != 1):
+        print("ERROR: value of %i is not 0 or 1" %InitialV)
+        time.sleep(pause)
+        AnomalyHandle()
 
     Ncells = 32 # Number of grid cells. NumGridPoints: Nx = Nc + 1
 
@@ -171,9 +167,6 @@ def LaplacianStencil(Nx,dx,eps_0):
     vals = np.vstack((v,-2.0*v,v))
     Lmtx = sp.spdiags(vals,diags,Nx,Nx);
     Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    # Lmtx[0,0] = 0.0, linearly dependent column space => singular matrix
-    # Lmtx[1,0] = 0.0
-    # Lmtx[Nx-1,0] = 0.0
     Lmtx[0,Nx-1] = -1.0
     LaplPreFactor = eps_0 * dx**2
     Lmtx /= LaplPreFactor

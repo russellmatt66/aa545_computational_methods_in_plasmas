@@ -55,21 +55,25 @@ print("Closing Grid Generation Phase")
 print("Initializaing Particle Distribution")
 # 
 if (N == 2 and InitialV == 0):
-    vprime = 0.0 * v_th
     x_i[0] = -np.pi/4.0
     x_i[1] = np.pi/4.0
-    v_i[0] = vprime
-    v_i[1] = -vprime
+    v_i[0] = 0.0
+    v_i[1] = 0.0
+
+if(N != 2 and InitialV == 0):
+    for pidx in np.arange(N):
+        x_i[pidx] = (x_min + dx) + float(pidx)*2.0*(x_max + dx)/float(N-1)
+        v_i[pidx] = 0.0
 
 if(N == 2 and InitialV == 1):
-    vprime = 0.01 * v_th
+    vprime = 0.25 * v_th
     x_i[0] = -np.pi/2.0
     x_i[1] = np.pi/2.0
     v_i[0] = vprime
     v_i[1] = -vprime
 
-if(N != 2):
-    vprime = 0.0 * v_th
+if(N != 2 and InitialV == 1):
+    vprime = 0.001 * v_th
     for pidx in np.arange(N):
         x_i[pidx] = (x_min + dx) + float(pidx)*2.0*(x_max + dx)/float(N-1)
         v_i[pidx] = vprime*np.sin(2.0*np.pi/L * x_i[pidx])
@@ -118,14 +122,15 @@ plt.plot(tvector,TotalEnergy,label="Total")
 plt.legend()
 plt.xlabel('Time')
 plt.ylabel('Energy')
-plt.title('System Energy History for %i-Order Weighting, $v^{\'}$ = %4.3f$v_{th}$, $\Delta t = %4.3f$, and $N_{steps} = %i$' %(WeightingOrder,vprime/v_th,dt,Nt))
+plt.title('System Energy History')
+# plt.title('System Energy History for %i-Order Weighting, $v^{\'}$ = %4.3f$v_{th}$, $\Delta t = %4.3f$, and $N_{steps} = %i$' %(WeightingOrder,vprime/v_th,dt,Nt))
 
 plt.figure(PhaseSpaceFig.number)
 plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
-# plt.ylim((-2.0,2.0))
-plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt,Nt))
+plt.title('Superparticle Trajectories')
+# plt.title('Superparticle Trajectories for %i-Order Weighting with $v^{\'}$ = %4.3f$v_{th}$, dt = %4.3f and $N_{steps}$ = %i' %(WeightingOrder,vprime/v_th,dt,Nt))
 
 plt.figure(ChargeDensityFig.number)
 plt.xlabel('x')

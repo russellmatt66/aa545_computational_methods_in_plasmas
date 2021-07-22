@@ -17,23 +17,33 @@ L = x_max - x_min
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
 N = 4
-particlesPosition = np.zeros((N,1),dtype=float)
-particlesVelocity = np.zeros((N,1),dtype=float)
+x_i = np.zeros((N,1),dtype=float)
+v_i = np.zeros((N,1),dtype=float)
 
 # Normalization
+omega_p = 1.0
+tau_p = 2.0 * np.pi / omega_p
 eps_0 = 1.0 # vacuum permittivity
-qm = -1.0 # charge to mass ratio of superparticle
-omega_p = 1.0 # plasma frequency
-tau_plasma = 2.0*np.pi/omega_p
-q_sp = eps_0 * omega_p**2 * (L/float(N)) / qm# charge associated with a superparticle given normalization - population assumed uniform
-m_sp = qm*q_sp # mass associated with a particular superparticle given normalization - population assumed uniform
-T = 1.0 # [eV]
-lambda_D = np.sqrt((eps_0 * T * L)/(N * q_sp **2))
-v_th = omega_p*lambda_D # thermal velocity
-print(v_th)
-print(1.0e-32*v_th)
+q_over_m = -1.0 # charge to mass ratio of superparticle
+q_sp = (eps_0 * L / N) * (1.0 / q_over_m) # charge of a superparticle
+m_sp = (N / L) * q_sp**2
+Te = 1.0 # [eV]
+lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
+v_th = omega_p * lambda_De
+
+""" Test Findj/B.Cs """
+# Conclusion: Findj works correctly for the most part
+# Exception: When x_i is located exactly on a grid point
+# xfind = x_max - 0.5*dx
+x_to_find = np.zeros((Nx,1),dtype=float)
+for xidx in np.arange(np.size(x_to_find)):
+    x_to_find[xidx] = x_min + (0.5 + float(xidx))*dx
+    jfound = pmod.Findj(x_grid,x_to_find[xidx])
+    jfoundp1 = (jfound +1) % Nx
+    print("For x_i = %f, jfound is %i and jfoundp1 is %i" %(x_to_find[xidx],jfound,jfoundp1))
 
 """ Test particle distribution Initialization for N = 64 """
+"""
 vprime = 0.01*v_th
 for pidx in np.arange(N):
     particlesPosition[pidx] = x_min/2.0 + float(pidx)*x_max/float(N-1)
@@ -46,8 +56,7 @@ plt.xlabel('x')
 plt.ylabel('v (normalized to $v_{th}$)')
 plt.xlim((x_min,x_max))
 plt.ylim((-2.0,2.0))
-
-plt.show()
+"""
 
 """ Test Hexadecimal functions for N = 64 """
 # particleColors = [None] * N
@@ -135,4 +144,5 @@ plt.show()
 # fig = plt.figure()
 # ax = plt.axes()
 # ax.pcolor(Lmtx.astype(np.ndarray))
-# plt.show()
+
+plt.show()
