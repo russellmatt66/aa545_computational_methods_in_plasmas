@@ -32,7 +32,35 @@ Te = 1.0 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
-""" Examine Stencils (Prefactors absent) """
+""" Examine Electric Potential
+Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
+PotentialFig = plt.figure()
+N = 4 # Keep things local
+WeightingOrder = 1
+rho_j = np.zeros((Nx,1),dtype=float)
+phi_j = np.zeros((Nx,1),dtype=float)
+a = (L - 2.0*dx)/(N-1) # linear coefficients for evenly distributing particles
+b = x_min + dx
+for pidx in np.arange(N):
+    x_i[pidx] = a*pidx + b
+    print("The location of particle %i is %3.2f" %(pidx+1,x_i[pidx]))
+
+rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,N,x_grid,Nx,dx,L,rho_j,q_sp)
+phi_j = pmod.PotentialSolveES(Lmtx,phi_j,rho_j)
+plt.figure(PotentialFig.number)
+plt.plot(x_grid,phi_j,label='Electric Potential')
+plt.scatter(x_grid,np.zeros(np.size(x_grid)),label='Grid Points')
+plt.scatter(x_i,0.01*np.ones(np.size(x_i)),label='Particles')
+plt.title("Initial State")
+plt.legend()
+# plt.axvline(x=x_min)
+# plt.axvline(x=x_max)
+"""
+
+""" Examine Stencils (Prefactors absent) 
+# Conclusion: Basic structure seems ok, but plt.spy() does not give details about
+#             the value stored in the particular location of an array so the
+#             possiblity of a bug cannot be ruled out with complete certainty
 # Lmtx = np.zeros((Nx,Nx),dtype=float)
 # FDmtx = np.zeros((Nx,Nx),dtype=float)
 LmtxFig = plt.figure()
@@ -46,8 +74,9 @@ Lmtx = sp.spdiags(vals_Lmtx,diags,Nx,Nx)
 FDmtx = sp.spdiags(vals_FDmtx,diags,Nx,Nx)
 # Add periodic B.Cs
 Lmtx = sp.lil_matrix(Lmtx)
-Lmtx[0,0] = 0.0
-Lmtx[0,Nx-1] = 1.0
+Lmtx[0,:] = 0.0
+Lmtx[0,0] = 1.0
+Lmtx[Nx-1,0] = 1.0
 Lmtx = sp.csr_matrix(Lmtx)
 FDmtx = sp.lil_matrix(FDmtx)
 FDmtx[1,0] = 0.0
@@ -59,6 +88,7 @@ plt.title('Lmtx')
 plt.figure(FDmtxFig.number)
 plt.spy(FDmtx)
 plt.title('FDmtx')
+"""
 
 """ Examine Details of Particle-Weighting
 ChargeDensityFig = plt.figure()
