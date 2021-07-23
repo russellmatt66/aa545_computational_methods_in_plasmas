@@ -17,9 +17,6 @@ from scipy.sparse import linalg as la
 
 """ Basic Parameters """
 pause = 1.0
-# e = 1.0 # normalized fundamental unit of electric charge
-# q_e = -e # electron charge
-# q_i = e # ion charge
 
 def Initialize():
     """
@@ -167,8 +164,9 @@ def LaplacianStencil(Nx,dx,eps_0):
     vals = np.vstack((v,-2.0*v,v))
     Lmtx = sp.spdiags(vals,diags,Nx,Nx);
     Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    Lmtx[0,Nx-1] = 1.0
-    LaplPreFactor = eps_0 * dx**2
+    Lmtx[0,0] = 0.0 # gauge for Periodic B.Cs: phi_0 = 0.0
+    Lmtx[0,Nx-1] = 1.0 # from Periodic B.Cs: phi_-1 = phi_Nx-1
+    LaplPreFactor = dx**2 / eps_0
     Lmtx /= LaplPreFactor
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
@@ -184,6 +182,7 @@ def PotentialSolveES(rho_j,Lmtx):
         phi_j - Nx x 1 array containing the electric potential at each grid point
     """
     phi_j = la.spsolve(Lmtx,rho_j)
+    phi_j = -1.0*phi_j # don't forget the negative sign
     return phi_j
 
 def FirstDerivativeStencil(Nx,dx):
@@ -219,6 +218,7 @@ def FieldSolveES(phi_j,FDmtx):
         E_j - Nx x 1 array containing the value of the  electric field at each grid point
     """
     E_j = FDmtx @ phi_j
+    E_j = -1.0*E_j # Don't forget the negative sign
     return E_j
 
 def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
@@ -256,8 +256,9 @@ def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
 
     return E_i
 
+"""
+Legacy
 def EulerStep(dt,E_i,v_i,qm):
-    """
     Euler half-step to start Leap-Frog method
     Inputs:
         dt - Time step, Advance is Forward or Backward depending on sgn(dt)
@@ -267,14 +268,15 @@ def EulerStep(dt,E_i,v_i,qm):
         qm - charge-to-mass ratio of the superparticle
     Outputs:
         v_i - N x 1 array containing the velocity of the different particles at t = dt/2 = t_{1/2}
-    """
     v_i = v_i + qm*dt*E_i
     return v_i
+"""
 
-def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
+def LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,X_min,X_max):
     """
     Function to compute the particle advance using the Leapfrog algorithm
     Inputs:
+    N - number of particles
         x_i - x_i(t_{n-1}), N x 1 array of particle positions at t = t_{n-1} = (n-1)*dt
         v_i - v_i(t_{n-1/2}), N x 1 array of particle velocities in 1D
         dt - Time step
@@ -286,11 +288,19 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
         x_i - x_i(t_{n}), N x 1 array of particles positions at t = t_{n} = n*dt
         v_i - v_i(t_{n+1/2})
     """
+    for pidx in np.arange(N):
+        if n == 0: # Initial step requires velocity half-step backwards
+            v_i[pidx] = v_i[pidx] - 0.5*dt*q_over_m*E_i[pidx]
+        else:
+            v_i[pidx] = v_i[pidx] + dt*q_over_m*E_i[pidx]
+        x_i[pidx] = x_i[pidx] + dt*v_i[pidx]
+    """
+    Legacy
     if n == 0: # First step requires an initial velocity half-step to begin
-        v_i = EulerStep(-dt/2.0,E_i,v_i,qm)# half-step backwards gives v_i(t_{-1/2}) to begin
+        for pidx in np.arange(N):
+            v_i[pidx] = EulerStep(-dt/2.0,E_i[pidx],v_i[pidx],qm)# half-step backwards gives v_i(t_{-1/2}) to begin
     v_i = v_i + qm*dt*E_i # v_i(t_{n+1/2}) = v_i(t_{n-1/2}) + (q/m)*dt*E_i
     x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
-    """
     for pidx in np.arange(np.size(x_i)):
         if(x_i[pidx] > X_max): # particle exited grid via right boundary
             Dx = x_i[pidx] - X_max

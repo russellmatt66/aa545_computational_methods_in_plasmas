@@ -85,8 +85,8 @@ PhaseSpaceFig = plt.figure()
 FieldFig = plt.figure()
 ChargeDensityFig = plt.figure()
 
-dt = 0.005 * tau_p
-Nt = 500
+dt = 0.032 * tau_p
+Nt = 100
 
 KineticEnergy = np.zeros(Nt)
 ElectricFieldEnergy = np.zeros(Nt)
@@ -104,7 +104,7 @@ for n in np.arange(Nt):
     phi_j = pmod.PotentialSolveES(rho_j,Lmtx)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     E_i = pmod.ForceWeighting(WeightingOrder,x_i,E_i,x_grid,Nx,dx,E_j)
-    x_i, v_i = pmod.LeapFrog(x_i,v_i,E_i,dt,q_over_m,n,x_min,x_max) # Particle push
+    x_i, v_i = pmod.LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,x_min,x_max) # Particle push
     ElectricFieldEnergy[n] = pmod.ComputeElectricFieldEnergy(E_j,Nx,dx) # Compute after field is solved for
     TotalEnergy[n] = KineticEnergy[n] + ElectricFieldEnergy[n]
     if n == 0:

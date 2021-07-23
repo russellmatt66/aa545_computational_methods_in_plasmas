@@ -32,7 +32,35 @@ Te = 1.0 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
-""" Examine Details of Particle-Weighting """
+""" Examine Stencils (Prefactors absent) """
+# Lmtx = np.zeros((Nx,Nx),dtype=float)
+# FDmtx = np.zeros((Nx,Nx),dtype=float)
+LmtxFig = plt.figure()
+FDmtxFig = plt.figure()
+# Create sparse matrices
+v = np.ones(Nx)
+diags = np.array([-1,0,1])
+vals_Lmtx = np.vstack((v,-2.0*v,v))
+vals_FDmtx = np.vstack((-1.0*v,0.0*v,v))
+Lmtx = sp.spdiags(vals_Lmtx,diags,Nx,Nx)
+FDmtx = sp.spdiags(vals_FDmtx,diags,Nx,Nx)
+# Add periodic B.Cs
+Lmtx = sp.lil_matrix(Lmtx)
+Lmtx[0,0] = 0.0
+Lmtx[0,Nx-1] = 1.0
+Lmtx = sp.csr_matrix(Lmtx)
+FDmtx = sp.lil_matrix(FDmtx)
+FDmtx[1,0] = 0.0
+FDmtx[0,Nx-1] = -1.0
+FDmtx = sp.csr_matrix(FDmtx)
+plt.figure(LmtxFig.number)
+plt.spy(Lmtx)
+plt.title('Lmtx')
+plt.figure(FDmtxFig.number)
+plt.spy(FDmtx)
+plt.title('FDmtx')
+
+""" Examine Details of Particle-Weighting
 ChargeDensityFig = plt.figure()
 N = 4 # Keep things local
 WeightingOrder = 1
@@ -49,6 +77,7 @@ plt.plot(x_grid,rho_j)
 plt.scatter(x_i,np.ones(np.size(x_i)))
 plt.axvline(x=x_min)
 plt.axvline(x=x_max)
+"""
 
 """ Test Findj/B.Cs """
 """
