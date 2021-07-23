@@ -53,7 +53,8 @@ FDmtx = pmod.FirstDerivativeStencil(Nx,dx)
 print("Closing Grid Generation Phase")
 
 print("Initializaing Particle Distribution")
-# 
+a = (L - 2.0*dx)/(N-1) # linear coefficients for evenly distributing particles
+b = x_min + dx 
 if (N == 2 and InitialV == 0):
     x_i[0] = -np.pi/4.0
     x_i[1] = np.pi/4.0
@@ -62,7 +63,7 @@ if (N == 2 and InitialV == 0):
 
 if(N != 2 and InitialV == 0):
     for pidx in np.arange(N):
-        x_i[pidx] = (x_min + dx) + float(pidx)*2.0*(x_max + dx)/float(N-1)
+        x_i[pidx] = a*pidx + b
         v_i[pidx] = 0.0
 
 if(N == 2 and InitialV == 1):
@@ -75,7 +76,7 @@ if(N == 2 and InitialV == 1):
 if(N != 2 and InitialV == 1):
     vprime = 0.001 * v_th
     for pidx in np.arange(N):
-        x_i[pidx] = (x_min + dx) + float(pidx)*2.0*(x_max + dx)/float(N-1)
+        x_i[pidx] = a*pidx + b
         v_i[pidx] = vprime*np.sin(2.0*np.pi/L * x_i[pidx])
 
 """ Initialize Diagnostics and Simulation Parameters """
@@ -84,16 +85,17 @@ PhaseSpaceFig = plt.figure()
 FieldFig = plt.figure()
 ChargeDensityFig = plt.figure()
 
-dt = 0.032 * tau_p
-Nt = 100
+dt = 0.005 * tau_p
+Nt = 500
 
 KineticEnergy = np.zeros(Nt)
 ElectricFieldEnergy = np.zeros(Nt)
 TotalEnergy = np.zeros(Nt)
 
+
 """ Main Loop """
 for n in np.arange(Nt):
-    print("Taking step %i" %n)
+    print("Taking step %i" %(n+1))
     KineticEnergy[n] = pmod.ComputeKineticEnergy(v_i,m_sp) # Compute before particle push
     # Plot particle locations in phase-space
     plt.figure(PhaseSpaceFig.number)
@@ -111,8 +113,8 @@ for n in np.arange(Nt):
         plt.title('Initial grid charge density, N = %i particles' %N)
         plt.figure(FieldFig.number)
         plt.plot(x_grid,E_j)
-        plt.title('Initial grid electric field, N = %i particles' %N)
-
+        plt.title('Initial grid electric field, N = %i particles')
+                  
 # Plot Energy 
 tvector = np.linspace(0.0,float((Nt-1)*dt),Nt)
 plt.figure(EnergyFig.number)

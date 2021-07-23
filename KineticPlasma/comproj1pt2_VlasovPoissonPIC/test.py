@@ -10,15 +10,16 @@ import picmodule_1pt2 as pmod
 import numpy as np
 import matplotlib.pyplot as plt
 
-Nx = 33
+Nx = 33 # number of grid points = 32 + 1
 x_min = -np.pi
 x_max = np.pi
 L = x_max - x_min
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
-N = 4
+N = 4 # number of particles
 x_i = np.zeros((N,1),dtype=float)
 v_i = np.zeros((N,1),dtype=float)
+WeightingOrder = 1
 
 # Normalization
 omega_p = 1.0
@@ -31,7 +32,26 @@ Te = 1.0 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
+""" Examine Details of Particle-Weighting """
+ChargeDensityFig = plt.figure()
+N = 4 # Keep things local
+WeightingOrder = 1
+rho_j = np.zeros((Nx,1),dtype=float)
+a = (L - 2.0*dx)/(N-1) # linear coefficients for evenly distributing particles
+b = x_min + dx
+for pidx in np.arange(N):
+    x_i[pidx] = a*pidx + b
+    print("The location of particle %i is %3.2f" %(pidx+1,x_i[pidx]))
+
+rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,N,x_grid,Nx,dx,L,rho_j,q_sp)
+plt.figure(ChargeDensityFig.number)
+plt.plot(x_grid,rho_j)
+plt.scatter(x_i,np.ones(np.size(x_i)))
+plt.axvline(x=x_min)
+plt.axvline(x=x_max)
+
 """ Test Findj/B.Cs """
+"""
 # Conclusion: Findj works correctly for the most part
 # Exception: When x_i is located exactly on a grid point
 # xfind = x_max - 0.5*dx
@@ -41,6 +61,7 @@ for xidx in np.arange(np.size(x_to_find)):
     jfound = pmod.Findj(x_grid,x_to_find[xidx])
     jfoundp1 = (jfound +1) % Nx
     print("For x_i = %f, jfound is %i and jfoundp1 is %i" %(x_to_find[xidx],jfound,jfoundp1))
+"""
 
 """ Test particle distribution Initialization for N = 64 """
 """

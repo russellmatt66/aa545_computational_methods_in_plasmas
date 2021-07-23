@@ -167,7 +167,7 @@ def LaplacianStencil(Nx,dx,eps_0):
     vals = np.vstack((v,-2.0*v,v))
     Lmtx = sp.spdiags(vals,diags,Nx,Nx);
     Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    Lmtx[0,Nx-1] = -1.0
+    Lmtx[0,Nx-1] = 1.0
     LaplPreFactor = eps_0 * dx**2
     Lmtx /= LaplPreFactor
     Lmtx = sp.csr_matrix(Lmtx)
@@ -288,9 +288,9 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
     """
     if n == 0: # First step requires an initial velocity half-step to begin
         v_i = EulerStep(-dt/2.0,E_i,v_i,qm)# half-step backwards gives v_i(t_{-1/2}) to begin
-        # x_i = x_i + dt*v_i - Artifact of Forward Euler half=step
     v_i = v_i + qm*dt*E_i # v_i(t_{n+1/2}) = v_i(t_{n-1/2}) + (q/m)*dt*E_i
     x_i = x_i + dt*v_i # x_i(t_{n+1}) = x_i(t_{n}) + dt*v_i(t_{n+1/2})
+    """
     for pidx in np.arange(np.size(x_i)):
         if(x_i[pidx] > X_max): # particle exited grid via right boundary
             Dx = x_i[pidx] - X_max
@@ -298,6 +298,7 @@ def LeapFrog(x_i,v_i,E_i,dt,qm,n,X_min,X_max):
         if(x_i[pidx] < X_min):# particle exited grid via left boundary
             Dx = x_i[pidx] - X_min
             x_i[pidx] = X_max + Dx
+    """
     return x_i, v_i
 
 """ Diagnostics """
