@@ -101,7 +101,7 @@ for n in np.arange(Nt):
     plt.figure(PhaseSpaceFig.number)
     plt.scatter(x_i,v_i)
     rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,N,x_grid,Nx,dx,L,rho_j,q_sp)
-    phi_j = pmod.PotentialSolveES(rho_j,Lmtx)
+    phi_j = pmod.PotentialSolveES(Lmtx,phi_j,rho_j)
     E_j = pmod.FieldSolveES(phi_j,FDmtx)
     E_i = pmod.ForceWeighting(WeightingOrder,x_i,E_i,x_grid,Nx,dx,E_j)
     x_i, v_i = pmod.LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,x_min,x_max) # Particle push
