@@ -164,10 +164,10 @@ def LaplacianStencil(Nx,dx,eps_0):
     vals = np.vstack((v,-2.0*v,v))
     Lmtx = sp.spdiags(vals,diags,Nx,Nx);
     Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    Lmtx[0,:] = 0.0
-    Lmtx[0,0] = -1.0 # Gauge of phi_{0] = 0 asserted in PotentialSolve()
-    Lmtx[Nx-1,0] = 1.0
-    LaplPreFactor = dx**2 / eps_0
+    Lmtx[Nx-1,:] = 0.0 # Part of gauge: phi_{0} = 0
+    Lmtx[0,Nx-1] = 1.0 # Periodic BCs
+    Lmtx[Nx-1,0] = 1.0 # Periodic BCs + Gauge
+    LaplPreFactor = -dx**2 / eps_0
     Lmtx /= LaplPreFactor
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
@@ -180,11 +180,11 @@ def PotentialSolveES(Lmtx,phi_j,rho_j):
         Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
         Nx - number of grid points
     Outputs:
-        phi_j - Nx x 1 array containing the electric potential at each grid point
+        phi_j - Nx x 1 array containing the electric potential at each grid 
     """
-    # phi_j[0] = 0.0 # phi_{0} = 0
-    phi_j = la.spsolve(Lmtx,rho_j)
-    phi_j = -1.0*phi_j # don't forget the negative sign
+    rho_j[np.size(rho_j)-1] = 0.0 # Part of gauge: phi_{0} = 0
+    phi_j = la.spsolve(Lmtx,rho_j) # Field Solve
+    phi_j[np.size(phi_j)-1] = phi_j[0] # Periodic BCs
     return phi_j
 
 def FirstDerivativeStencil(Nx,dx):

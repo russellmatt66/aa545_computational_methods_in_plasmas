@@ -3,12 +3,14 @@ Matt Russell
 AA545: Computational Methods for Plasmas
 Computer Project 1.2: Kinetic Modeling: Vlasov-Poisson PIC
 test.py
-Script to test code
+Initial script for testing code
 """
 from scipy import sparse as sp
 import picmodule_1pt2 as pmod
 import numpy as np
 import matplotlib.pyplot as plt
+
+N = 32 # number of particles
 
 Nx = 33 # number of grid points = 32 + 1
 x_min = -np.pi
@@ -16,7 +18,6 @@ x_max = np.pi
 L = x_max - x_min
 x_grid = np.linspace(x_min,x_max,Nx,dtype=float)
 dx = (x_max - x_min)/float(Nx)
-N = 4 # number of particles
 x_i = np.zeros((N,1),dtype=float)
 v_i = np.zeros((N,1),dtype=float)
 WeightingOrder = 1
@@ -28,15 +29,14 @@ eps_0 = 1.0 # vacuum permittivity
 q_over_m = -1.0 # charge to mass ratio of superparticle
 q_sp = (eps_0 * L / N) * (1.0 / q_over_m) # charge of a superparticle
 m_sp = (N / L) * q_sp**2
-Te = 1.0 # [eV]
+#Te = 1.0 # [eV]
+Te = 1.0e-4 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
 """ Examine Electric Potential
 Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
 PotentialFig = plt.figure()
-N = 4 # Keep things local
-WeightingOrder = 1
 rho_j = np.zeros((Nx,1),dtype=float)
 phi_j = np.zeros((Nx,1),dtype=float)
 a = (L - 2.0*dx)/(N-1) # linear coefficients for evenly distributing particles
@@ -57,43 +57,18 @@ plt.legend()
 # plt.axvline(x=x_max)
 """
 
-""" Examine Stencils (Prefactors absent) 
-# Conclusion: Basic structure seems ok, but plt.spy() does not give details about
-#             the value stored in the particular location of an array so the
-#             possiblity of a bug cannot be ruled out with complete certainty
-# Lmtx = np.zeros((Nx,Nx),dtype=float)
-# FDmtx = np.zeros((Nx,Nx),dtype=float)
-LmtxFig = plt.figure()
-FDmtxFig = plt.figure()
-# Create sparse matrices
-v = np.ones(Nx)
-diags = np.array([-1,0,1])
-vals_Lmtx = np.vstack((v,-2.0*v,v))
-vals_FDmtx = np.vstack((-1.0*v,0.0*v,v))
-Lmtx = sp.spdiags(vals_Lmtx,diags,Nx,Nx)
-FDmtx = sp.spdiags(vals_FDmtx,diags,Nx,Nx)
-# Add periodic B.Cs
-Lmtx = sp.lil_matrix(Lmtx)
-Lmtx[0,:] = 0.0
-Lmtx[0,0] = 1.0
-Lmtx[Nx-1,0] = 1.0
-Lmtx = sp.csr_matrix(Lmtx)
-FDmtx = sp.lil_matrix(FDmtx)
-FDmtx[1,0] = 0.0
-FDmtx[0,Nx-1] = -1.0
-FDmtx = sp.csr_matrix(FDmtx)
-plt.figure(LmtxFig.number)
+""" Examine Stencils
+# More streamlined version
+LmtxFigSt = plt.figure()
+Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
+plt.figure(LmtxFigSt.number)
 plt.spy(Lmtx)
-plt.title('Lmtx')
-plt.figure(FDmtxFig.number)
-plt.spy(FDmtx)
-plt.title('FDmtx')
+plt.title('1D Laplacian Stencil')
 """
 
-""" Examine Details of Particle-Weighting
+""" Examine Details of Particle-Weighting """
+# There is a bug for N = 32 and N = 64
 ChargeDensityFig = plt.figure()
-N = 4 # Keep things local
-WeightingOrder = 1
 rho_j = np.zeros((Nx,1),dtype=float)
 a = (L - 2.0*dx)/(N-1) # linear coefficients for evenly distributing particles
 b = x_min + dx
@@ -103,11 +78,13 @@ for pidx in np.arange(N):
 
 rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,N,x_grid,Nx,dx,L,rho_j,q_sp)
 plt.figure(ChargeDensityFig.number)
-plt.plot(x_grid,rho_j)
-plt.scatter(x_i,np.ones(np.size(x_i)))
+plt.plot(x_grid,rho_j,label="Charge Density")
+plt.scatter(x_i,np.ones(np.size(x_i)),label="Particles")
+plt.scatter(x_grid,np.zeros(np.size(x_grid)),label="Grid Points")
+plt.title('Initial Particle Weighting for N = %i particles' %N)
 plt.axvline(x=x_min)
 plt.axvline(x=x_max)
-"""
+plt.legend()
 
 """ Test Findj/B.Cs """
 """
