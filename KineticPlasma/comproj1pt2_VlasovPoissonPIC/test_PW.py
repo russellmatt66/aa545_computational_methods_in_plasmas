@@ -150,7 +150,7 @@ rvar = PWmoveplusfind(x_i,v_i,dt,rho_j,flag,0)
 
 """
 Make a movie out of a single particle moving through grid, track search algo results, and particle-weighting
-"""
+# Conclusion: movie successfully made - nothing anomalous detected
 N = 1 # number of particles
 Nt = 10 # number of frames
 dt = 1.0
@@ -176,3 +176,74 @@ for i in np.arange(Nt):
 
 animation = camera.animate()
 animation.save('/home/matt/python/movie_playground/movies/KP1pt2_part-grid-find_motion.gif', writer = 'imagemagick', fps=1)
+"""
+
+"""
+Make a movie out of N = "powers-of-two" particle systems to demonstrate bug that appears from charge-weighting
+# Conclusion: movie successfully made - anomaly demonstrated
+#N_min = 2
+#N_max = 64
+
+N = 2 ** np.arange(7)
+
+InitWeightFig = plt.figure()
+camera = Camera(InitWeightFig)
+
+rho_j = np.zeros((Nx,1),dtype=float)
+
+for nidx in np.arange(np.size(N)):
+    if nidx == 0:
+        continue
+    x_i = np.zeros((N[nidx],1),dtype=float)
+    a = (L - 2.0*dx)/(N[nidx]-1)
+    b = x_min + dx
+    for pidx in np.arange(N[nidx]):
+        x_i[pidx] = a*pidx + b
+    q_sp = (eps_0 * L / N[nidx]) * (1.0 / q_over_m)
+    m_sp = (N[nidx] / L) * q_sp**2
+    rho_j = pmod.ParticleWeighting(1,x_i,x_grid,Nx,dx,L,rho_j,q_sp)
+    l1 = plt.scatter(x_grid,np.zeros(Nx),color='black',label='grid')
+    l2 = plt.scatter(x_i,np.ones((N[nidx],1),dtype=float),color='red',label='Particle')
+    l3 = plt.scatter(x_grid,rho_j,color='blue')
+    plt.title('Initial particle-weighting for N = %i particles' %N[nidx])
+    plt.legend([l1,l2,l3],['Grid','Particles','Charge Density'])
+    camera.snap()
+
+animation = camera.animate()
+animation.save('/home/matt/python/movie_playground/movies/KP1pt2_part-grid-weight.gif', writer = 'imagemagick', fps=1)
+"""
+
+"""
+Make a movie out of the electric potential computation for  N = "powers-of-two" particle systems
+"""
+# Conclusion:
+N = 2 ** np.arange(7)
+
+Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
+PotentialFig = plt.figure()
+camera = Camera(PotentialFig)
+
+rho_j = np.zeros((Nx,1),dtype=float)
+phi_j = np.zeros((Nx,1),dtype=float)
+
+for nidx in np.arange(np.size(N)):
+    if nidx == 0:
+        continue
+    x_i = np.zeros((N[nidx],1),dtype=float)
+    a = (L - 2.0*dx)/(N[nidx]-1)
+    b = x_min + dx
+    for pidx in np.arange(N[nidx]):
+        x_i[pidx] = a*pidx + b
+    q_sp = (eps_0 * L / N[nidx]) * (1.0 / q_over_m)
+    m_sp = (N[nidx] / L) * q_sp**2
+    rho_j = pmod.ParticleWeighting(1,x_i,x_grid,Nx,dx,L,rho_j,q_sp)
+    phi_j = pmod.PotentialSolveES(Lmtx,phi_j,rho_j)
+    l1 = plt.scatter(x_grid,np.zeros(Nx),color='black',label='grid')
+    l2 = plt.scatter(x_i,np.ones((N[nidx],1),dtype=float),color='red',label='Particle')
+    l3 = plt.scatter(x_grid,phi_j,color='blue')
+    plt.title('Initial particle-weighting for N = %i particles' %N[nidx])
+    plt.legend([l1,l2,l3],['Grid','Particles','Electric Potential'])
+    camera.snap()
+
+animation = camera.animate()
+animation.save('/home/matt/python/movie_playground/movies/KP1pt2_potential.gif', writer = 'imagemagick', fps=1)

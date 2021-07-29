@@ -33,7 +33,7 @@ Te = 1.0 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
-""" Examine Electric Potential
+""" Examine Electric Potential """
 Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
 PotentialFig = plt.figure()
 rho_j = np.zeros((Nx,1),dtype=float)
@@ -44,7 +44,7 @@ for pidx in np.arange(N):
     x_i[pidx] = a*pidx + b
     print("The location of particle %i is %3.2f" %(pidx+1,x_i[pidx]))
 
-rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,N,x_grid,Nx,dx,L,rho_j,q_sp)
+rho_j = pmod.ParticleWeighting(WeightingOrder,x_i,x_grid,Nx,dx,L,rho_j,q_sp)
 phi_j = pmod.PotentialSolveES(Lmtx,phi_j,rho_j)
 plt.figure(PotentialFig.number)
 plt.plot(x_grid,phi_j,label='Electric Potential')
@@ -54,7 +54,7 @@ plt.title("Initial State")
 plt.legend()
 # plt.axvline(x=x_min)
 # plt.axvline(x=x_max)
-"""
+
 
 """ Examine Stencils
 # More streamlined version
@@ -65,7 +65,8 @@ plt.spy(Lmtx)
 plt.title('1D Laplacian Stencil')
 """
 
-""" Examine Details of Particle-Weighting """
+""" Examine Details of Particle-Weighting
+# Conclusion: this investigation is expanded upon in test_PW.py
 # There is a bug for N = 32 and N = 64
 ChargeDensityFig = plt.figure()
 rho_j = np.zeros((Nx,1),dtype=float)
@@ -84,6 +85,7 @@ plt.title('Initial Particle Weighting for N = %i particles' %N)
 plt.axvline(x=x_min)
 plt.axvline(x=x_max)
 plt.legend()
+"""
 
 """ Test Findj/B.Cs """
 """
