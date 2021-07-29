@@ -97,7 +97,7 @@ def Findj(x_j,x_i):
     # time.sleep(pause)
     return guess
 
-def ParticleWeighting(WeightingOrder,x_i,N,x_j,Nx,dx,L,rho_j,q_sp):
+def ParticleWeighting(WeightingOrder,x_i,x_j,Nx,dx,L,rho_j,q_sp):
     """
     Function to weight the particles to grid. Step #1 in PIC general procedure.
     Electrostatic -> no current at the moment.

@@ -29,8 +29,7 @@ eps_0 = 1.0 # vacuum permittivity
 q_over_m = -1.0 # charge to mass ratio of superparticle
 q_sp = (eps_0 * L / N) * (1.0 / q_over_m) # charge of a superparticle
 m_sp = (N / L) * q_sp**2
-#Te = 1.0 # [eV]
-Te = 1.0e-4 # [eV]
+Te = 1.0 # [eV]
 lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 v_th = omega_p * lambda_De
 
