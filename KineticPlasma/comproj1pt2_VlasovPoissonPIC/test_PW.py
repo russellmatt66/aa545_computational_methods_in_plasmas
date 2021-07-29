@@ -1,11 +1,12 @@
 """
 Matt Russell
 7/28/21
-test_PW.py - unit test for Particle-Weighting step in PIC algorithm
+test_PW.py - unit tests for Particle-Weighting step in PIC algorithm
 """
 import numpy as np
 import matplotlib.pyplot as plt
 import picmodule_1pt2 as pmod
+from celluloid import Camera
 
 # Parameters
 Nx = 33 # number of grid points = 32 + 1
@@ -65,7 +66,7 @@ def PWmove(x_i,v_i,dt,rho_j,flag,iter): # Watch a single particle move through t
     iter = iter + 1
     return PWmove(x_i,v_i,dt,rho_j,flag,iter)
 
-def PWmoveplusfind(x_i,v_i,dt,rho_j,flag,iter): # Watch a single particle move through the grid
+def PWmoveplusfind(x_i,v_i,dt,rho_j,flag,iter): # Watch a single particle move through the grid and overlay the indices: j and  j+1 s.t x_j < x_i < x_{j+1}
     print('This is iteration %i' %iter)
     # flag = 0 is standard
     if flag == 1: # particle reached other side of grid
@@ -146,3 +147,32 @@ flag = 0
 plt.figure()
 rvar = PWmoveplusfind(x_i,v_i,dt,rho_j,flag,0)
 """
+
+"""
+Make a movie out of a single particle moving through grid, track search algo results, and particle-weighting
+"""
+N = 1 # number of particles
+Nt = 10 # number of frames
+dt = 1.0
+x_i = x_min
+v_i = L/(float(Nt)*dt)
+rho_j = np.zeros((Nx,1),dtype=float)
+q_sp = (eps_0 * L / N) * (1.0 / q_over_m) # charge of a superparticle
+
+ScatterFig = plt.figure()
+camera = Camera(ScatterFig)
+for i in np.arange(Nt):
+    jfound = pmod.Findj(x_grid,x_i) # binary search
+    jfoundp1 = jfound + 1 # '%' operator should not be necessary
+    rho_j = pmod.ParticleWeighting(1,[x_i],x_grid,Nx,dx,L,rho_j,q_sp)
+    l1 = plt.scatter(x_grid,np.zeros(Nx),color='black',label='grid')
+    l2 = plt.scatter(x_i,1.0,color='red',label='Particle')
+    l3 = plt.axvline(x=x_grid[jfound],label='j from search algo')
+    l4 = plt.axvline(x=x_grid[jfoundp1])
+    l5 = plt.scatter(x_grid,rho_j,color='blue')
+    plt.legend([l1, l2, l3, l5],['grid', 'Particle', 'j and j+1 from search algo', 'rho'])
+    camera.snap()
+    x_i = x_i + v_i*dt # Particle Push
+
+animation = camera.animate()
+animation.save('/home/matt/python/movie_playground/movies/KP1pt2_part-grid-find_motion.gif', writer = 'imagemagick', fps=1)
