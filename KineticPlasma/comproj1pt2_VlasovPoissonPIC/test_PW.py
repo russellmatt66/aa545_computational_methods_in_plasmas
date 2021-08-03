@@ -1,7 +1,9 @@
 """
 Matt Russell
 7/28/21
-test_PW.py - unit tests for Particle-Weighting step in PIC algorithm
+test_PW.py
+Script for preliminary investigation of particle-weighting bug
+#Conclusion: N > 16 case is suspect and I need a better animation to pinpoint the problem. Goto test_PW2.py
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +29,9 @@ q_over_m = -1.0 # charge to mass ratio of superparticle
 # lambda_De = np.sqrt(Te * N * (q_over_m**2) / (eps_0 * L))
 # v_th = omega_p * lambda_De
 
-def PWtest(N,rho_j): # run through Nmin to Nmax and see output of charge-weighting
+# Weight a single distribution of particles to the grid
+def PWtest(N):
+    rho_j = np.zeros((Nx,1),dtype=float)
     x_i = np.zeros((N,1),dtype=float)
     a = (L - 2.0*dx)/(N-1)
     b = x_min + dx
@@ -35,13 +39,8 @@ def PWtest(N,rho_j): # run through Nmin to Nmax and see output of charge-weighti
         x_i[pidx] = a*pidx + b
     q_sp = (eps_0 * L / N) * (1.0 / q_over_m)
     m_sp = (N / L) * q_sp**2
-    rho_j = pmod.ParticleWeighting(1,x_i,x_grid,Nx,dx,L,rho_j,q_sp)
-    plt.plot(x_grid,rho_j,label='Charge Density')
-    plt.scatter(x_i,np.ones(np.size(x_i)),label='Particles')
-    plt.scatter(x_grid,np.zeros(np.size(x_grid)),label='Grid Points')
-    plt.legend()
-    plt.title('Initial Particle-Weighting N = %i' %N)
-    return 0
+    rho_j = pmod.ParticleWeighting(1,x_i,x_grid,Nx,dx,L,rho_j,q_sp) # '1' arg refers to WeightingOrder
+    return rho_j, x_i
 
 def PWmove(x_i,v_i,dt,rho_j,flag,iter): # Watch a single particle move through the grid
     print('This is iteration %i' %iter)
@@ -215,8 +214,8 @@ animation.save('/home/matt/python/movie_playground/movies/KP1pt2_part-grid-weigh
 
 """
 Make a movie out of the electric potential computation for  N = "powers-of-two" particle systems
-"""
-# Conclusion:
+# Conclusion: Eric has characterized the N = 16 case as 'great' so I am going to investigate the process in greater detail and also check for errors in the order
+
 N = 2 ** np.arange(7)
 
 Lmtx = pmod.LaplacianStencil(Nx,dx,eps_0)
@@ -247,3 +246,26 @@ for nidx in np.arange(np.size(N)):
 
 animation = camera.animate()
 animation.save('/home/matt/python/movie_playground/movies/KP1pt2_potential.gif', writer = 'imagemagick', fps=1)
+"""
+
+"""
+Investigate rho_j in the N > 16 case
+"""
+N_min = 16
+N_max = 64
+
+ChargeFig = plt.figure()
+camera = Camera(ChargeFig)
+
+for nidx in np.linspace(N_min,N_max,num=(N_max-N_min)):
+    rho_j,x_i = PWtest(int(nidx))
+    l1 = plt.scatter(x_grid,rho_j, color='red', label='Charge Density')
+    l2 = plt.scatter(x_i,np.ones(np.size(x_i)), color='blue', label='Particles')
+    l3 = plt.scatter(x_grid,np.zeros(np.size(x_grid)), color='black', label='Grid Points')
+    plt.legend([l1,l2,l3],['Charge Density','Particles','Grid Points'])
+    plt.title('Initial Particle-Weighting for N \in [%i, %i]' %(N_min,N_max))
+    #plt.title('Initial Particle-Weighting for N = %i' %int(nidx))
+    camera.snap()
+
+animation = camera.animate()
+animation.save('/home/matt/python/movie_playground/movies/RhosterScan.gif', writer = 'imagemagick', fps=1)
