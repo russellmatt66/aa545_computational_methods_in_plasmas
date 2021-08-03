@@ -11,21 +11,84 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import sys
+
 from numba import jit
 from scipy import sparse as sp
 from scipy.sparse import linalg as la
 
 """ Basic Parameters """
-pause = 1.0
+PAUSE = 1.0 # for handling anomalies
+
+NX = 33 # number of grid points - requirement
+X_MIN = -np.pi
+X_MAX = np.pi
+L = X_MAX- X_MIN
+DX = L/float(NX)
+X_GRID = np.linspace(X_MIN,X_MAX,NX) # endpoint=True
+
+OMEGA_P = 1.0
+TAU_P = 2.0 * np.pi / OMEGA_P
+EPS_0 = 1.0
+Q_OVER_M = -1.0
+T_ELCTRN = 1.0 # "[eV]", I don't think it really matters
+
+""" Basic Objects """
+RHO_j = np.zeros((NX,1),dtype=float) # Grid Charge Density
+PHI_j = np.zeros((NX,1),dtype=float) # Grid Electrostatic Potential
+E_j = np.zeros((NX,1),dtype=float) # Grid Electrostatic field
+
+""" Functions """
+def LaplacianStencil():
+    """
+    Finite difference approximation for Laplacian operator
+    Output is provided to PotentialSolveES()
+    B.Cs: Periodic
+    Gauge: phi[0] = 0
+    Inputs:
+        Nx - Number of grid points
+        dx - Grid spacing
+    Outputs:
+        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
+    """
+    global NX, DX, EPS_0
+    v = np.ones(NX)
+    diags = np.array([-1,0,1])
+    vals = np.vstack((v,-2.0*v,v))
+    Lmtx = sp.spdiags(vals,diags,NX,NX);
+    Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
+    Lmtx[NX-1,:] = 0.0 # Part of gauge: phi_{0} = 0
+    Lmtx[0,NX-1] = 1.0 # Periodic BCs
+    Lmtx[NX-1,0] = 1.0 # Periodic BCs + Gauge
+    LaplPreFactor = -DX**2 / EPS_0
+    Lmtx /= LaplPreFactor
+    Lmtx = sp.csr_matrix(Lmtx)
+    return Lmtx
+
+def FirstDerivativeStencil():
+    """
+    Finite (Central) Difference approximation of first derivative
+    Output (sparse matrix) is used to solve for (irrotational) E_j given PHI_j
+    Inputs:
+        Nx - Number of grid points
+        dx - Grid spacing
+    Outputs:
+        FDmtx - Nx x Nx matrix for calculating first derivative of potential
+    """
+    global NX
+    v = np.ones(NX)
+    diags = np.array([-1,0,1])
+    vals = np.vstack((-v,0.0*v,v))
+    FDmtx = sp.spdiags(vals,diags,NX,NX)
+    FDmtx = sp.lil_matrix(FDmtx)
+    FDmtx[1,0] = 0.0
+    FDmtx[0,NX-1] = -1.0
+    FDmtx /= 2.0*DX
+    FDmtx = sp.csr_matrix(FDmtx)
+    return FDmtx
 
 def Initialize():
     """
-    InitState - 4x1 column vector containing:
-        N = InitState[0], the number of particles to be used in the simulation
-        Ncells = InitState[1], the number of grid cells " " " " " "
-        WeightingOrder = InitState[2], \textit{a} \in {0,1} representing the choice of
-                                        0th- or 1st-order weighting for charge and forces.
-        InitialV = InitState[3], flag for whether to initialize a velocity perturbation on the particle distribution
+    InitState - array
     """
     print("pmod.Initialize() executing ...")
     print("Please enter the number of particles to simulate")
@@ -41,14 +104,13 @@ def Initialize():
         print("ERROR: %i is larger than 64" %N)
         time.sleep(pause)
         AnomalyHandle()
+
     print("Do you want to initialize a velocity perturbation? 0 for no, 1 for yes")
     InitialV = int(input(''))
     if(InitialV != 0 and InitialV != 1):
         print("ERROR: value of %i is not 0 or 1" %InitialV)
         time.sleep(pause)
         AnomalyHandle()
-
-    Ncells = 32 # Number of grid cells. NumGridPoints: Nx = Nc + 1
 
     print("Please enter 0 for 0th-order charge/force weighting or 1 for 1st-order:")
     WeightingOrder = int(input(''))
@@ -58,19 +120,14 @@ def Initialize():
         AnomalyHandle()
 
     # I can't think of a better way to store this information
-    InitState = np.empty((4,1),dtype=int)
-    InitState[0] = N
-    InitState[1] = Ncells
-    InitState[2] = WeightingOrder
-    InitState[3] = InitialV
+    InitState = [N, WeightingOrder, InitialV]
     print("pmod.Initialize() execution complete ...")
     return InitState
 
-def Findj(x_j,x_i):
+def Findj(x_i):
     """
     Binary search to find j for 1st-order weighting s.t x_j[j] < x_i < x_j[j+1]
     Inputs:
-        x_j - Nx x 1 ndarray representing spatial grid
         x_i - Scalar (float64) variable representing superparticle position
         guess - Initial guess for jfound
         low - Initial lower bound for jfound
@@ -78,101 +135,67 @@ def Findj(x_j,x_i):
     Outputs:
         jfound - the index that fulfills the condition described in fncn summary
     """
+    global X_GRID
     i = 0 # counter
     low = 0
-    high = np.size(x_j) - 1
+    high = np.size(X_GRID) - 1
     guess = int(np.floor((low+high)/2))
-    while((x_i > x_j[guess] and x_i < x_j[guess + 1]) == False):
+    while((x_i > X_GRID[guess] and x_i < X_GRID[guess + 1]) == False):
         # print("cycle count = %i" %i)
-        if(x_j[guess] < x_i):
+        if(X_GRID[guess] < x_i):
             low = guess
             guess = int(np.floor((low+high)/2))
-        elif(x_j[guess] > x_i):
+        elif(X_GRID[guess] > x_i):
             high = guess
             guess = int(np.floor((low+high)/2))
         i += 1 # brakes
-        if(i > int(np.sqrt(np.size(x_j)))):
+        if(i > int(np.sqrt(np.size(X_GRID)))):
             break
-    # print("Search complete, index found is %i in %i iterations" %(guess,i))
-    # time.sleep(pause)
     return guess
 
-def ParticleWeighting(WeightingOrder,x_i,x_j,Nx,dx,L,rho_j,q_sp):
+def ParticleWeighting(WeightingOrder,x_i,q_sp):
     """
-    Function to weight the particles to grid. Step #1 in PIC general procedure.
+    Function to weight the particles to grid. Step #1 in PIC computational cycle
     Electrostatic -> no current at the moment.
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
-        x_i - N x 1 array containing the particle locations, i.e, particlesPosition
-        N - Number of Particles
-        x_j - Nx x 1 array representing the spatial grid
-        Nx - Number of grid points
-        dx - grid spacing
-        L - length of grid
-        rho_j - Nx x 1 array containing the charge density at each grid point
+        x_i - N x 1 array containing the particle locations, i.e, particlesPositio
         q_sp - charge associated with the population of superparticles
     Outputs:
-        rho_j - Nx x 1 array containing the charge density at each grid point
+        RHO_j - Nx x 1 array containing the charge density at each grid point
     Return Code:
-        -1 - FUBAR
+        0 = Hunky-dory
+        -1 = FUBAR
     """
+    global RHO_j, X_GRID, DX
     if (WeightingOrder != 0 and WeightingOrder != 1):
         print("ERROR: Input weighting order appears to be out of bounds")
         print("LOCATION: ParticleWeighting() function ")
         return -1
 
-    # dx = (x_j[np.size(x_j)-1] - x_j[0])/float(np.size(x_j))
-
     if WeightingOrder == 0:
-        count = np.zeros((np.size(x_j),1),dtype=int)
-        for j in np.arange(np.size(x_j)):
+        count = np.zeros((np.size(X_GRID),1),dtype=int)
+        for j in np.arange(np.size(X_GRID)):
             for i in np.arange(np.size(x_i)):
-                if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
+                if (np.abs(X_GRID[j] - x_i[i]) < DX/2.0):
                     count[j] += 1
-                rho_j[j] = q_sp*float(count[j])/dx
-
+                RHO_j[j] = q_sp*float(count[j])/DX
+    
     if WeightingOrder == 1:
-        rho_j[:] = 0.0
+        RHO_j[:] = 0.0
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
-            jfound = Findj(x_j,x_i[i]) # binary search
-            jfoundp1 = (jfound + 1) % Nx
-            rho_j[jfound] = q_sp*(x_j[jfoundp1] - x_i[i])/dx
-            rho_j[jfoundp1] = q_sp*(x_i[i] - x_j[jfound])/dx
+            jfound = Findj(x_i[i]) # binary search
+            jfoundp1 = (jfound + 1) % NX
+            RHO_j[jfound] = q_sp*(X_GRID[jfoundp1] - x_i[i])/DX
+            RHO_j[jfoundp1] = q_sp*(x_i[i] - X_GRID[jfound])/DX
 
     # Add contribution of static, uniform ion background s.t plasma is quasineutra
-    rho_background = -(dx/L)*(np.sum(rho_j[1:(Nx-2)]) + (rho_j[0] + rho_j[Nx-1]))
-    rho_j = rho_j + rho_background
-    return rho_j
+    RHO_bg = -(DX/L)*(np.sum(RHO_j[1:(NX-2)]) + (RHO_j[0] + RHO_j[NX-1]))
+    RHO_j = RHO_j + RHO_bg
+    return 0
 
-def LaplacianStencil(Nx,dx,eps_0):
-    """
-    Output is used as an argument for PotentialSolve()
-    B.Cs: Periodic
-    Gauge: phi[0] = 0
-    Discretization: Finite Difference
-    Inputs:
-        Nx - Number of grid points
-        dx - Grid spacing
-    Outputs:
-        Lmtx - Nx x Nx matrix for calculating Laplacian on the grid
-    Governing Equations:
-        (1) Gauss' Law -> Poisson's Equation
-    """
-    v = np.ones(Nx)
-    diags = np.array([-1,0,1])
-    vals = np.vstack((v,-2.0*v,v))
-    Lmtx = sp.spdiags(vals,diags,Nx,Nx);
-    Lmtx = sp.lil_matrix(Lmtx); # need to alter entries
-    Lmtx[Nx-1,:] = 0.0 # Part of gauge: phi_{0} = 0
-    Lmtx[0,Nx-1] = 1.0 # Periodic BCs
-    Lmtx[Nx-1,0] = 1.0 # Periodic BCs + Gauge
-    LaplPreFactor = -dx**2 / eps_0
-    Lmtx /= LaplPreFactor
-    Lmtx = sp.csr_matrix(Lmtx)
-    return Lmtx
-
-def PotentialSolveES(Lmtx,phi_j,rho_j):
+def PotentialSolveES(Lmtx):
     """
     Function to solve for the electric potential on the grid, phi_j
     Inputs:
@@ -182,35 +205,13 @@ def PotentialSolveES(Lmtx,phi_j,rho_j):
     Outputs:
         phi_j - Nx x 1 array containing the electric potential at each grid 
     """
-    rho_j[np.size(rho_j)-1] = 0.0 # Part of gauge: phi_{0} = 0
-    phi_j = la.spsolve(Lmtx,rho_j) # Field Solve
-    phi_j[np.size(phi_j)-1] = phi_j[0] # Periodic BCs
-    return phi_j
+    global RHO_j, PHI_j
+    RHO_j[np.size(RHO_j)-1] = 0.0 # Part of gauge: phi_{0} = 0
+    PHI_j = la.spsolve(Lmtx,RHO_j) # Field Solve
+    PHI_j[np.size(PHI_j)-1] = PHI_j[0] # Periodic BCs
+    return 0
 
-def FirstDerivativeStencil(Nx,dx):
-    """
-    Output is used as an argument for FieldSolve()
-    Governing Equations:
-        (1) E = -grad(phi) => E = -d(phi)/dx
-    Discretization: Central Difference
-    Inputs:
-        Nx - Number of grid points
-        dx - Grid spacing
-    Outputs:
-        FDmtx - Nx x Nx matrix for calculating first derivative of potential
-    """
-    v = np.ones(Nx)
-    diags = np.array([-1,0,1])
-    vals = np.vstack((-v,0.0*v,v))
-    FDmtx = sp.spdiags(vals,diags,Nx,Nx)
-    FDmtx = sp.lil_matrix(FDmtx)
-    FDmtx[1,0] = 0.0
-    FDmtx[0,Nx-1] = -1.0
-    FDmtx /= 2.0*dx
-    FDmtx = sp.csr_matrix(FDmtx)
-    return FDmtx
-
-def FieldSolveES(phi_j,FDmtx):
+def FieldSolveES(FDmtx):
     """
     Function to solve for the electric field on the grid, E_j.
     Inputs:
@@ -219,24 +220,22 @@ def FieldSolveES(phi_j,FDmtx):
     Outputs:
         E_j - Nx x 1 array containing the value of the  electric field at each grid point
     """
-    E_j = FDmtx @ phi_j
+    global E_j, PHI_j
+    E_j = FDmtx @ PHI_j
     E_j = -1.0*E_j # Don't forget the negative sign
-    return E_j
+    return 0
 
-def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
+def ForceWeighting(WeightingOrder,x_i,E_i):
     """
     Inputs:
         WeightingOrder - {0,1}, information the program uses to determine whether
                         to use 0th or 1st order weighting
         E_i - N x 1 array containing the electric fields experienced by the particles
-        dx - Grid Spacing
-        E_j - Nx x 1 array containing the values of the electric field on the grid
         x_i - N x 1 array containing the positions of the particles
-        x_j - Nx x 1 array containing the grid points
-        Nx - Number of grid points
     Outputs:
         E_i
     """
+    global X_GRID, E_j, NX, DX
     if (WeightingOrder != 0 and WeightingOrder != 1):
         print("ERROR: Input weighting order appears to be out of bounds")
         print("LOCATION: ForceWeighting() function ")
@@ -244,18 +243,16 @@ def ForceWeighting(WeightingOrder,x_i,E_i,x_j,Nx,dx,E_j):
 
     if WeightingOrder == 0:
         for i in np.arange(np.size(x_i,axis=0)):
-            for j in np.arange(np.size(x_j,axis=0)):
-                if (np.abs(x_j[j] - x_i[i]) < dx/2.0):
+            for j in np.arange(np.size(X_GRID,axis=0)):
+                if (np.abs(X_GRID[j] - x_i[i]) < DX/2.0):
                     E_i[i] = E_j[j]
-
+                    
     if WeightingOrder == 1:
         for i in np.arange(np.size(x_i)): # Find j s.t. x_{j} < x_{i} < x_{j+1}
-            jfound = Findj(x_j,x_i[i])
-            jfoundp1 = (jfound + 1) % Nx # handles jfound == Nx-1 and returns jfound + 1 for all else
-            E_i[i] = ((x_j[jfoundp1] - x_i[i])/dx)*E_j[jfound] + ((x_i[i] - x_j[jfound])/dx)*E_j[jfoundp1]
-            # for j in np.arange(np.size(x_j)): # Search algorithm here could be better
-            #     if (x_j[j] < x_i[i] and x_i[i] < x_j[j+1]):
-
+            jfound = Findj(x_i[i])
+            jfoundp1 = (jfound + 1) % NX # handles jfound == Nx-1 and returns jfound + 1 for all else
+            E_i[i] = ((X_GRID[jfoundp1] - x_i[i])/DX)*E_j[jfound] + \
+                ((x_i[i] - X_GRID[jfound])/DX)*E_j[jfoundp1]
     return E_i
 
 """
@@ -274,7 +271,7 @@ def EulerStep(dt,E_i,v_i,qm):
     return v_i
 """
 
-def LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,X_min,X_max):
+def LeapFrog(N,x_i,v_i,E_i,dt,n):
     """
     Function to compute the particle advance using the Leapfrog algorithm
     Inputs:
@@ -290,11 +287,12 @@ def LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,X_min,X_max):
         x_i - x_i(t_{n}), N x 1 array of particles positions at t = t_{n} = n*dt
         v_i - v_i(t_{n+1/2})
     """
+    global Q_OVER_M
     for pidx in np.arange(N):
         if n == 0: # Initial step requires velocity half-step backwards
-            v_i[pidx] = v_i[pidx] - 0.5*dt*q_over_m*E_i[pidx]
+            v_i[pidx] = v_i[pidx] - 0.5*dt*Q_OVER_M*E_i[pidx]
         else:
-            v_i[pidx] = v_i[pidx] + dt*q_over_m*E_i[pidx]
+            v_i[pidx] = v_i[pidx] + dt*Q_OVER_M*E_i[pidx]
         x_i[pidx] = x_i[pidx] + dt*v_i[pidx]
     """
     Legacy
@@ -314,12 +312,13 @@ def LeapFrog(N,x_i,v_i,E_i,dt,q_over_m,n,X_min,X_max):
     return x_i, v_i
 
 """ Diagnostics """
-def ComputeElectricFieldEnergy(E_j,Nx,dx):
+def ComputeElectricFieldEnergy():
     """
     Compute the grid-integrated electric field energy
     """
+    global DX, NX, E_j
     E_j_sq = np.square(E_j)
-    PEgrid = dx*0.5*(0.5*(E_j[0]**2 + E_j[Nx-1]**2)+np.sum(E_j_sq[1:(Nx-2)]))
+    PEgrid = DX * 0.5 * (0.5*(E_j[0]**2 + E_j[NX-1]**2)+np.sum(E_j_sq[1:(NX-2)]))
     return PEgrid
 
 def ComputeKineticEnergy(v_i,m_sp):
@@ -329,50 +328,6 @@ def ComputeKineticEnergy(v_i,m_sp):
     KE = 0.5*m_sp*np.sum(np.square(v_i))
     return KE
                             
-def GridIntegrate(E_j,Nx,dx,v_i,m_sp):
-    """
-    Compute the grid-integrated electric field energy, kinetic energy, and their
-    sum
-    """
-    # Efgrid = 0.0
-    # KineticEnergy = 0.0
-    # ETotal = 0.0
-    # for j in np.arange(np.size(E_j)):
-    #     Efgrid = Efgrid + E_j[j]*E_j[j]/2.0
-    # print("Grid-integrated Electric field energy is %f" %Efgrid)
-    # for i in np.arange(np.size(v_i)):
-    #     KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
-    # print("System kinetic energy is %f" %KineticEnergy)
-    """ Grid-Integrated """
-    E_j_squared = np.square(E_j)
-    Efgrid = dx*0.5*(0.5*(E_j[0]**2 + E_j[Nx-1]**2) + np.sum(E_j_squared[1:(Nx-2)]))
-    KineticEnergy = 0.5*m_sp*np.sum(np.square(v_i))
-    ETotal = Efgrid + KineticEnergy
-    return Efgrid,KineticEnergy,ETotal
-
-# def ComputeOscillationFrequency(x_n,x_np1):
-#     """
-#     """
-#     if(x_n)
-
-# def Diagnostics(E_j,v_i,n,**ax):
-#     """
-#     Function to implement appropriate diagnostic. Don't know how to pass axes
-#     object to function as an argument.
-#     """
-#     Egrid = 0.0
-#     KineticEnergy = 0.0
-#     # if n == 0:
-#         # diagFig, (axKin, axE, axTot) = plt.subplots(nrows=3,ncols=1)
-#     for j in np.arange(np.size(E_j)):
-#         Egrid = Egrid + E_j[j]*E_j[j]/2.0
-#     ax[0].scatter(n,Egrid)
-#     for i in np.arange(np.size(v_i)):
-#         KineticEnergy = KineticEnergy + 0.5*v_i[i]*v_i[i]
-#     ax[1].scatter(n,KineticEnergy)
-#     ax[2].scatter(n,Egrid+KineticEnergy)
-#     return 0
-
 """ Helper Functions """
 
 def AddHex(hex1,hex2):
