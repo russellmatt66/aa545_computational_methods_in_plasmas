@@ -26,11 +26,11 @@ L = X_MAX- X_MIN
 DX = L/float(NX)
 X_GRID = np.linspace(X_MIN,X_MAX,NX) # endpoint=True
 
-OMEGA_P = 1.0
-TAU_P = 2.0 * np.pi / OMEGA_P
-EPS_0 = 1.0
-Q_OVER_M = -1.0
-T_ELCTRN = 1.0 # "[eV]", I don't think it really matters
+OMEGA_P = 1.0 # Plasma Frequency
+TAU_P = 2.0 * np.pi / OMEGA_P # Plasma Period
+EPS_0 = 1.0 # Vacuum Permittivity 
+Q_OVER_M = -1.0 # Charge to Mass ratio
+T_ELCTRN = 1.0 # "[eV]", I don't think this really matters here
 
 """ Basic Objects """
 RHO_j = np.zeros((NX,1),dtype=float) # Grid Charge Density
