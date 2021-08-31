@@ -19,9 +19,12 @@ Np_vec = np.array([Nprtcl for Nprtcl in range(N_min,N_max+1)])
 #ChrgFig = plt.figure()
 #ChrgAx = plt.axes()
 #plt.xlim(pmod.X_MIN,pmod.X_MAX)
+
 ChrgFig, ChrgAx = plt.subplots(1,2)
 
-sc_rho = ChrgAx[0].scatter([],[])
+#sc_rho = ChrgAx[0].scatter([],[])
+#plot_rho = ChrgAx[0].plot([],[])
+ChrgAx[0].plot([],[])
 ChrgAx[0].set_xlim(pmod.X_MIN,pmod.X_MAX)
 
 sc_prtcl = ChrgAx[1].scatter([],[])
@@ -37,6 +40,8 @@ def init():
 
 def animate(N):
     # I need each frame to show the charge density and each particle for that particular N with NO superposition, i.e, for N = 20 I only want to see the data for 20 particles. I do not want data from N = 16, 17, etc. to also be on the figure. 
+    ChrgAx[0].clear()
+    ChrgAx[0].set_title("Initial charge density for N = {} particles".format(N))
     x_i = np.zeros((N,1),dtype=float) # particle positions
     q_sp = (pmod.EPS_0 * pmod.L / N) * (1.0 / pmod.Q_OVER_M)
     # linear coefficients for evenly distributing particles
@@ -45,7 +50,8 @@ def animate(N):
     for pidx in np.arange(N):
         x_i[pidx] = a*pidx + b
     pmod.ParticleWeighting(1,x_i,q_sp) # updates rho_j
-    sc_rho.set_offsets(np.c_[pmod.X_GRID,pmod.RHO_j])
+    #sc_rho.set_offsets(np.c_[pmod.X_GRID,pmod.RHO_j])
+    ChrgAx[0].plot(pmod.X_GRID,pmod.RHO_j)
     rhomax = np.amax(pmod.RHO_j)
     ChrgAx[0].set_ylim(-rhomax,rhomax)
     sc_prtcl.set_offsets(np.c_[x_i,np.ones(N)])
